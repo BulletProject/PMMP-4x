@@ -216,7 +216,7 @@
             ],
             "description": "Classes and methods for conveniently handling binary data",
             "support": {
-                "source": "https://github.com/pmmp/BinaryUtils/tree/master",
+                "source": "https://github.com/pmmp/BinaryUtils/tree/0.1.1",
                 "issues": "https://github.com/pmmp/BinaryUtils/issues"
             },
             "time": "2018-08-26T18:11:05+00:00"
