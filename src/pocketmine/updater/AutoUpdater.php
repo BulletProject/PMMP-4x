@@ -47,10 +47,6 @@ class AutoUpdater{
 	public function __construct(Server $server, string $endpoint){
 		$this->server = $server;
 		$this->endpoint = "http://$endpoint/api/";
-
-		if($server->getProperty("auto-updater.enabled", true)){
-			$this->doCheck();
-		}
 	}
 
 	public function checkUpdateError(string $error) : void{
@@ -63,20 +59,7 @@ class AutoUpdater{
 	 * @param array $updateInfo
 	 */
 	public function checkUpdateCallback(array $updateInfo){
-		$this->updateInfo = $updateInfo;
-		$this->checkUpdate();
-		if($this->hasUpdate()){
-			(new UpdateNotifyEvent($this))->call();
-			if($this->server->getProperty("auto-updater.on-update.warn-console", true)){
-				$this->showConsoleUpdate();
-			}
-		}elseif($this->server->getProperty("auto-updater.preferred-channel", true)){
-			if(!\pocketmine\IS_DEVELOPMENT_BUILD and $this->getChannel() !== "stable"){
-				$this->showChannelSuggestionStable();
-			}elseif(\pocketmine\IS_DEVELOPMENT_BUILD and $this->getChannel() === "stable"){
-				$this->showChannelSuggestionBeta();
-			}
-		}
+		
 	}
 
 	/**

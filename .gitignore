@@ -1,7 +1,6 @@
 players/*
 worlds/*
 plugin_data/*
-plugins/*
 timings/*
 crashdumps/*
 *.log
