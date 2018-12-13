@@ -9,7 +9,7 @@ server.properties
 /pocketmine.yml
 memory_dumps/*
 resource_packs/
-
+PocketMine-DevTools/
 # Common IDEs
 .idea/
 nbproject/*
