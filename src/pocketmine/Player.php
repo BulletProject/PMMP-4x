@@ -1508,20 +1508,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 			$diff = $this->distanceSquared($newPos) / $tickDiff ** 2;
 
-			if($this->isSurvival() and !$revert and $diff > 0.0625){
-				$ev = new PlayerIllegalMoveEvent($this, $newPos, $this->lastLocation->asVector3());
-				$ev->setCancelled($this->allowMovementCheats);
-
-				$ev->call();
-
-				if(!$ev->isCancelled()){
-					$revert = true;
-					$this->server->getLogger()->warning($this->getServer()->getLanguage()->translateString("pocketmine.player.invalidMove", [$this->getName()]));
-					$this->server->getLogger()->debug("Old position: " . $this->asVector3() . ", new position: " . $this->newPosition);
-				}
-			}
-
-			if($diff > 0 and !$revert){
+			if($diff > 0){
 				$this->setPosition($newPos);
 			}
 		}

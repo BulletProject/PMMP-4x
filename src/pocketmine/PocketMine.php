@@ -36,7 +36,7 @@ namespace pocketmine {
 	use pocketmine\utils\VersionString;
 	use pocketmine\wizard\SetupWizard;
 
-	const NAME = "PocketMine-MP";
+	const NAME = "PocketMine-MP_MiRMEdition";
 	const BASE_VERSION = "4.0.0";
 	const IS_DEVELOPMENT_BUILD = false;
 	const BUILD_NUMBER = 0;
