@@ -91,13 +91,11 @@ use pocketmine\plugin\PluginManager;
 use pocketmine\plugin\ScriptPluginLoader;
 use pocketmine\resourcepacks\ResourcePackManager;
 use pocketmine\scheduler\AsyncPool;
-use pocketmine\scheduler\SendUsageTask;
 use pocketmine\snooze\SleeperHandler;
 use pocketmine\snooze\SleeperNotifier;
 use pocketmine\tile\Tile;
 use pocketmine\timings\Timings;
 use pocketmine\timings\TimingsHandler;
-use pocketmine\updater\AutoUpdater;
 use pocketmine\utils\Binary;
 use pocketmine\utils\Config;
 use pocketmine\utils\Internet;
@@ -173,8 +171,6 @@ class Server{
 	/** @var bool */
 	private $doTitleTick = true;
 
-	/** @var int */
-	private $sendUsageTicker = 0;
 
 	/** @var bool */
 	private $dispatchSignals = false;
@@ -2019,9 +2015,6 @@ class Server{
 		}
 
 		try{
-			if(!$this->isRunning()){
-				$this->sendUsage(SendUsageTask::TYPE_CLOSE);
-			}
 
 			$this->hasStopped = true;
 
@@ -2106,11 +2099,6 @@ class Server{
 			$this->network->blockAddress($entry->getName(), -1);
 		}
 
-		if($this->getProperty("settings.send-usage", true)){
-			$this->sendUsageTicker = 6000;
-			$this->sendUsage(SendUsageTask::TYPE_OPEN);
-		}
-
 
 		if($this->getProperty("network.upnp-forwarding", false)){
 			$this->logger->info("[UPnP] Trying to port forward...");
@@ -2183,9 +2171,7 @@ class Server{
 		if(!$this->isRunning){
 			return;
 		}
-		if($this->sendUsageTicker > 0){
-			$this->sendUsage(SendUsageTask::TYPE_CLOSE);
-		}
+
 		$this->hasStopped = false;
 
 		ini_set("error_reporting", '0');
@@ -2278,9 +2264,6 @@ class Server{
 	}
 
 	public function onPlayerLogin(Player $player){
-		if($this->sendUsageTicker > 0){
-			$this->uniquePlayers[$player->getRawUniqueId()] = $player->getRawUniqueId();
-		}
 
 		$this->loggedInPlayers[$player->getRawUniqueId()] = $player;
 	}
@@ -2418,13 +2401,6 @@ class Server{
 		}
 	}
 
-	public function sendUsage($type = SendUsageTask::TYPE_STATUS){
-		if((bool) $this->getProperty("anonymous-statistics.enabled", true)){
-			$this->asyncPool->submitTask(new SendUsageTask($this, $type, $this->uniquePlayers));
-		}
-		$this->uniquePlayers = [];
-	}
-
 
 	/**
 	 * @return BaseLang
@@ -2553,10 +2529,6 @@ class Server{
 			$this->doAutoSave();
 		}
 
-		if($this->sendUsageTicker > 0 and --$this->sendUsageTicker === 0){
-			$this->sendUsageTicker = 6000;
-			$this->sendUsage(SendUsageTask::TYPE_STATUS);
-		}
 
 		if(($this->tickCounter % 100) === 0){
 			foreach($this->levels as $level){
