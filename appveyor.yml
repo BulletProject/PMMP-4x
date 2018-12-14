@@ -18,7 +18,7 @@ build_script:
 
     git clone https://github.com/pmmp/PocketMine-DevTools --depth=1
 
-    C:\projects\pmmp-4x\bin\php\php.exe -dphar.readonly=0 PocketMine-DevTools\src\DevTools\ConsoleScript.php --make src,vendor,resources --relative ./ --entry src/pocketmine/PocketMine.php --out artifacts/pmmpAPI4.phar
+    C:\projects\pmmp-4x\bin\php\php.exe -dphar.readonly=0 PocketMine-DevTools\src\DevTools\ConsoleScript.php --make src,vendor,resources --relative ./ --entry src/pocketmine/PocketMine.php --out artifacts/pmmpAPI3.phar
 
 artifacts:
-- path: artifacts/pmmpAPI4.phar
+- path: artifacts/pmmpAPI3.phar
