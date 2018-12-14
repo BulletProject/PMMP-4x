@@ -608,12 +608,6 @@ class Server{
 		return $this->levelMetadata;
 	}
 
-	/**
-	 * @return AutoUpdater
-	 */
-	public function getUpdater(){
-		return $this->updater;
-	}
 
 	/**
 	 * @return PluginManager
