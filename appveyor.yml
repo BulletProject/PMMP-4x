@@ -14,6 +14,8 @@ build_script:
 
     ./bin/composer.bat update
     
+    rm -rf artifacts
+    
     mkdir artifacts
 
     git clone https://github.com/pmmp/PocketMine-DevTools --depth=1
