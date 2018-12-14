@@ -1,13 +1,11 @@
 players/*
 worlds/*
 plugin_data/*
-plugins/*
 bin*/*
 timings/*
 crashdumps/*
 *.log
 *.txt
-*.phar
 server.properties
 /pocketmine.yml
 memory_dumps/*
