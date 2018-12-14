@@ -611,13 +611,6 @@ class Server{
 	}
 
 	/**
-	 * @return AutoUpdater
-	 */
-	public function getUpdater(){
-		return $this->updater;
-	}
-
-	/**
 	 * @return PluginManager
 	 */
 	public function getPluginManager(){
