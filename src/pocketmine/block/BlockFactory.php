@@ -380,7 +380,8 @@ class BlockFactory{
 	 */
 	public static function get(int $id, int $meta = 0, Position $pos = null) : Block{
 		if($meta < 0 or $meta > 0xf){
-			throw new \InvalidArgumentException("Block meta value $meta is out of bounds");
+			//throw new \InvalidArgumentException("Block meta value $meta is out of bounds");
+			$meta = 0;
 		}
 
 		try{
@@ -390,7 +391,9 @@ class BlockFactory{
 				$block = new UnknownBlock($id, $meta);
 			}
 		}catch(\RuntimeException $e){
-			throw new \InvalidArgumentException("Block ID $id is out of bounds");
+			//throw new \InvalidArgumentException("Block ID $id is out of bounds");
+			$id = 0;
+			$block = new UnknownBlock($id, $meta);
 		}
 
 		if($pos !== null){

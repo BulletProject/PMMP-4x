@@ -44,7 +44,7 @@ class ItemBlock extends Item{
 	}
 
 	public function getBlock() : Block{
-		return BlockFactory::get($this->blockId, $this->meta === -1 ? 0 : $this->meta & 0xf);
+		return BlockFactory::get($this->blockId>=0?$this->blockId:0, $this->meta === -1 ? 0 : $this->meta & 0xf);
 	}
 
 	public function getVanillaName() : string{
