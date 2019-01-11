@@ -23,6 +23,37 @@ declare(strict_types=1);
 
 namespace pocketmine\utils;
 
+use function array_change_key_case;
+use function array_keys;
+use function array_pop;
+use function array_shift;
+use function basename;
+use function count;
+use function date;
+use function explode;
+use function file_exists;
+use function file_get_contents;
+use function file_put_contents;
+use function implode;
+use function is_array;
+use function is_bool;
+use function json_decode;
+use function json_encode;
+use function preg_match_all;
+use function preg_replace;
+use function serialize;
+use function str_replace;
+use function strlen;
+use function strtolower;
+use function substr;
+use function trim;
+use function unserialize;
+use function yaml_emit;
+use function yaml_parse;
+use const CASE_LOWER;
+use const JSON_BIGINT_AS_STRING;
+use const JSON_PRETTY_PRINT;
+
 /**
  * Config Class for simple config manipulation of multiple formats.
  */
@@ -111,9 +142,9 @@ class Config{
 	}
 
 	/**
-	 * @param       $file
-	 * @param int   $type
-	 * @param array $default
+	 * @param string $file
+	 * @param int    $type
+	 * @param array  $default
 	 *
 	 * @return bool
 	 */
@@ -289,7 +320,7 @@ class Config{
 	}
 
 	/**
-	 * @param $k
+	 * @param string $k
 	 *
 	 * @return bool|mixed
 	 */
@@ -298,15 +329,15 @@ class Config{
 	}
 
 	/**
-	 * @param $k
-	 * @param $v
+	 * @param string $k
+	 * @param mixed  $v
 	 */
 	public function __set($k, $v){
 		$this->set($k, $v);
 	}
 
 	/**
-	 * @param $k
+	 * @param string $k
 	 *
 	 * @return bool
 	 */
@@ -315,15 +346,15 @@ class Config{
 	}
 
 	/**
-	 * @param $k
+	 * @param string $k
 	 */
 	public function __unset($k){
 		$this->remove($k);
 	}
 
 	/**
-	 * @param $key
-	 * @param $value
+	 * @param string $key
+	 * @param mixed  $value
 	 */
 	public function setNested($key, $value){
 		$vars = explode(".", $key);
@@ -349,8 +380,8 @@ class Config{
 	}
 
 	/**
-	 * @param       $key
-	 * @param mixed $default
+	 * @param string $key
+	 * @param mixed  $default
 	 *
 	 * @return mixed
 	 */
@@ -401,8 +432,8 @@ class Config{
 	}
 
 	/**
-	 * @param       $k
-	 * @param mixed $default
+	 * @param string $k
+	 * @param mixed  $default
 	 *
 	 * @return bool|mixed
 	 */
@@ -433,8 +464,8 @@ class Config{
 	}
 
 	/**
-	 * @param      $k
-	 * @param bool $lowercase If set, searches Config in single-case / lowercase.
+	 * @param string $k
+	 * @param bool   $lowercase If set, searches Config in single-case / lowercase.
 	 *
 	 * @return bool
 	 */
@@ -449,7 +480,7 @@ class Config{
 	}
 
 	/**
-	 * @param $k
+	 * @param string $k
 	 */
 	public function remove($k){
 		unset($this->config[$k]);
@@ -533,7 +564,7 @@ class Config{
 	 * @param string $content
 	 */
 	private function parseProperties(string $content){
-		if(preg_match_all('/([a-zA-Z0-9\-_\.]+)[ \t]*=([^\r\n]*)/u', $content, $matches) > 0){ //false or 0 matches
+		if(preg_match_all('/^\s*([a-zA-Z0-9\-_\.]+)[ \t]*=([^\r\n]*)/um', $content, $matches) > 0){ //false or 0 matches
 			foreach($matches[1] as $i => $k){
 				$v = trim($matches[2][$i]);
 				switch(strtolower($v)){

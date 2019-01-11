@@ -27,6 +27,7 @@ namespace pocketmine\network\mcpe\protocol;
 
 use pocketmine\network\mcpe\NetworkSession;
 use pocketmine\network\mcpe\protocol\types\NetworkInventoryAction;
+use function count;
 
 class InventoryTransactionPacket extends DataPacket{
 	public const NETWORK_ID = ProtocolInfo::INVENTORY_TRANSACTION_PACKET;
@@ -147,7 +148,7 @@ class InventoryTransactionPacket extends DataPacket{
 				$this->putVector3($this->trData->headPos);
 				break;
 			default:
-				throw new \UnexpectedValueException("Unknown transaction type $this->transactionType");
+				throw new \InvalidArgumentException("Unknown transaction type $this->transactionType");
 		}
 	}
 

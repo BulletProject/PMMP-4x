@@ -160,6 +160,40 @@ use pocketmine\tile\Tile;
 use pocketmine\timings\Timings;
 use pocketmine\utils\TextFormat;
 use pocketmine\utils\UUID;
+use function abs;
+use function array_merge;
+use function assert;
+use function base64_decode;
+use function ceil;
+use function count;
+use function explode;
+use function floor;
+use function fmod;
+use function get_class;
+use function gettype;
+use function implode;
+use function in_array;
+use function is_int;
+use function is_object;
+use function is_string;
+use function json_encode;
+use function json_last_error_msg;
+use function lcg_value;
+use function max;
+use function microtime;
+use function min;
+use function preg_match;
+use function round;
+use function spl_object_hash;
+use function strlen;
+use function strpos;
+use function strtolower;
+use function substr;
+use function trim;
+use function ucfirst;
+use const M_PI;
+use const M_SQRT3;
+use const PHP_INT_MAX;
 
 
 /**
@@ -326,6 +360,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	protected $formIdCounter = 0;
 	/** @var Form[] */
 	protected $forms = [];
+
+	/** @var float */
+	protected $lastRightClickTime = 0.0;
+	/** @var Vector3|null */
+	protected $lastRightClickPos = null;
 
 	/**
 	 * @return TranslationContainer|string
@@ -671,7 +710,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	public function sendCommandData(){
 		$pk = new AvailableCommandsPacket();
 		foreach($this->server->getCommandMap()->getCommands() as $name => $command){
-			if(isset($pk->commandData[$command->getName()]) or $command->getName() === "help"){
+			if(isset($pk->commandData[$command->getName()]) or $command->getName() === "help" or !$command->testPermissionSilent($this)){
 				continue;
 			}
 
@@ -1037,6 +1076,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			$this->server->broadcastMessage($ev->getJoinMessage());
 		}
 
+		$this->setImmobile(false);
 		$this->noDamageTicks = 60;
 
 		foreach($this->usedChunks as $index => $c){
@@ -2087,6 +2127,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->setNameTagVisible();
 		$this->setNameTagAlwaysVisible();
 		$this->setCanClimb();
+		$this->setImmobile(); //disable pre-spawn movement
 
 		$this->server->getLogger()->info($this->getServer()->getLanguage()->translateString("pocketmine.player.logIn", [
 			TextFormat::AQUA . $this->username . TextFormat::WHITE,
@@ -2246,7 +2287,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				if($action !== null){
 					$actions[] = $action;
 				}
-			}catch(\Exception $e){
+			}catch(\UnexpectedValueException $e){
 				$this->server->getLogger()->debug("Unhandled inventory action from " . $this->getName() . ": " . $e->getMessage());
 				$this->sendAllInventories();
 				return false;
@@ -2316,6 +2357,19 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				$type = $packet->trData->actionType;
 				switch($type){
 					case InventoryTransactionPacket::USE_ITEM_ACTION_CLICK_BLOCK:
+						//TODO: start hack for client spam bug
+						$spamBug = ($this->lastRightClickPos !== null and
+							microtime(true) - $this->lastRightClickTime < 0.1 and //100ms
+							$this->lastRightClickPos->distanceSquared($packet->trData->clickPos) < 0.00001 //signature spam bug has 0 distance, but allow some error
+						);
+						//get rid of continued spam if the player clicks and holds right-click
+						$this->lastRightClickPos = clone $packet->trData->clickPos;
+						$this->lastRightClickTime = microtime(true);
+						if($spamBug){
+							return true;
+						}
+						//TODO: end hack for client spam bug
+
 						$this->setUsingItem(false);
 
 						if(!$this->canInteract($blockVector->add(0.5, 0.5, 0.5), 13) or $this->isSpectator()){
@@ -3556,10 +3610,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	}
 
 	protected function onDeathUpdate(int $tickDiff) : bool{
-		if(parent::onDeathUpdate($tickDiff)){
-			$this->despawnFromAll(); //non-player entities rely on close() to do this for them
-		}
-
+		parent::onDeathUpdate($tickDiff);
 		return false; //never flag players for despawn
 	}
 

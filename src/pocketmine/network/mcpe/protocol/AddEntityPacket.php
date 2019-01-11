@@ -30,6 +30,8 @@ use pocketmine\entity\EntityIds;
 use pocketmine\math\Vector3;
 use pocketmine\network\mcpe\NetworkSession;
 use pocketmine\network\mcpe\protocol\types\EntityLink;
+use function array_search;
+use function count;
 
 class AddEntityPacket extends DataPacket{
 	public const NETWORK_ID = ProtocolInfo::ADD_ENTITY_PACKET;
@@ -169,7 +171,7 @@ class AddEntityPacket extends DataPacket{
 	protected function decodePayload(){
 		$this->entityUniqueId = $this->getEntityUniqueId();
 		$this->entityRuntimeId = $this->getEntityRuntimeId();
-		$this->type = array_search($t = $this->getString(), self::LEGACY_ID_MAP_BC);
+		$this->type = array_search($t = $this->getString(), self::LEGACY_ID_MAP_BC, true);
 		if($this->type === false){
 			throw new \UnexpectedValueException("Can't map ID $t to legacy ID");
 		}
@@ -207,6 +209,9 @@ class AddEntityPacket extends DataPacket{
 	protected function encodePayload(){
 		$this->putEntityUniqueId($this->entityUniqueId ?? $this->entityRuntimeId);
 		$this->putEntityRuntimeId($this->entityRuntimeId);
+		if(!isset(self::LEGACY_ID_MAP_BC[$this->type])){
+			throw new \InvalidArgumentException("Unknown entity numeric ID $this->type");
+		}
 		$this->putString(self::LEGACY_ID_MAP_BC[$this->type]);
 		$this->putVector3($this->position);
 		$this->putVector3Nullable($this->motion);

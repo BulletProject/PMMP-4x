@@ -28,6 +28,11 @@ namespace pocketmine\network\mcpe\protocol;
 
 use pocketmine\network\mcpe\NetworkBinaryStream;
 use pocketmine\network\mcpe\NetworkSession;
+use function assert;
+use function get_class;
+use function strlen;
+use function zlib_decode;
+use function zlib_encode;
 #ifndef COMPILE
 use pocketmine\utils\Binary;
 #endif
@@ -111,7 +116,7 @@ class BatchPacket extends DataPacket{
 			$pk = PacketPool::getPacket($buf);
 
 			if(!$pk->canBeBatched()){
-				throw new \InvalidArgumentException("Received invalid " . get_class($pk) . " inside BatchPacket");
+				throw new \UnexpectedValueException("Received invalid " . get_class($pk) . " inside BatchPacket");
 			}
 
 			$session->handleDataPacket($pk);

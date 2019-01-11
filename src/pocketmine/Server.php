@@ -96,13 +96,83 @@ use pocketmine\snooze\SleeperNotifier;
 use pocketmine\tile\Tile;
 use pocketmine\timings\Timings;
 use pocketmine\timings\TimingsHandler;
-use pocketmine\utils\Binary;
 use pocketmine\utils\Config;
 use pocketmine\utils\MainLogger;
 use pocketmine\utils\Terminal;
 use pocketmine\utils\TextFormat;
 use pocketmine\utils\Utils;
 use pocketmine\utils\UUID;
+use function array_filter;
+use function array_key_exists;
+use function array_shift;
+use function array_sum;
+use function asort;
+use function assert;
+use function base64_encode;
+use function bin2hex;
+use function class_exists;
+use function count;
+use function define;
+use function explode;
+use function extension_loaded;
+use function file_exists;
+use function file_get_contents;
+use function file_put_contents;
+use function filemtime;
+use function floor;
+use function function_exists;
+use function gc_collect_cycles;
+use function get_class;
+use function getmypid;
+use function getopt;
+use function gettype;
+use function implode;
+use function ini_get;
+use function ini_set;
+use function is_array;
+use function is_bool;
+use function is_dir;
+use function is_object;
+use function is_string;
+use function is_subclass_of;
+use function json_decode;
+use function max;
+use function microtime;
+use function min;
+use function mkdir;
+use function pcntl_signal;
+use function pcntl_signal_dispatch;
+use function preg_replace;
+use function random_bytes;
+use function random_int;
+use function realpath;
+use function register_shutdown_function;
+use function rename;
+use function round;
+use function scandir;
+use function sleep;
+use function spl_object_hash;
+use function sprintf;
+use function str_repeat;
+use function str_replace;
+use function stripos;
+use function strlen;
+use function strrpos;
+use function strtolower;
+use function substr;
+use function time;
+use function touch;
+use function trim;
+use const DIRECTORY_SEPARATOR;
+use const INT32_MAX;
+use const INT32_MIN;
+use const PHP_EOL;
+use const PHP_INT_MAX;
+use const PTHREADS_INHERIT_NONE;
+use const SCANDIR_SORT_NONE;
+use const SIGHUP;
+use const SIGINT;
+use const SIGTERM;
 
 /**
  * The class that manages everything
@@ -1047,7 +1117,7 @@ class Server{
 			return false;
 		}
 
-		$seed = $seed ?? Binary::readInt(random_bytes(4));
+		$seed = $seed ?? random_int(INT32_MIN, INT32_MAX);
 
 		if(!isset($options["preset"])){
 			$options["preset"] = $this->getConfigString("generator-settings", "");
@@ -1437,8 +1507,6 @@ class Server{
 				"announce-player-achievements" => true,
 				"spawn-protection" => 16,
 				"max-players" => 20,
-				"spawn-animals" => true,
-				"spawn-mobs" => true,
 				"gamemode" => 0,
 				"force-gamemode" => false,
 				"hardcore" => false,
@@ -1473,7 +1541,7 @@ class Server{
 				return;
 			}
 
-			if(((int) ini_get('zend.assertions')) > 0 and ((bool) $this->getProperty("debug.assertions.warn-if-enabled", true)) !== false){
+			if(((int) ini_get('zend.assertions')) !== -1){
 				$this->logger->warning("Debugging assertions are enabled, this may impact on performance. To disable them, set `zend.assertions = -1` in php.ini.");
 			}
 
@@ -1649,7 +1717,9 @@ class Server{
 			GeneratorManager::registerDefaultGenerators();
 
 			foreach((array) $this->getProperty("worlds", []) as $name => $options){
-				if(!is_array($options)){
+				if($options === null){
+					$options = [];
+				}elseif(!is_array($options)){
 					continue;
 				}
 				if(!$this->loadLevel($name)){
@@ -2151,7 +2221,7 @@ class Server{
 			"fullFile" => $e->getFile(),
 			"file" => $errfile,
 			"line" => $errline,
-			"trace" => Utils::printableTrace($trace)
+			"trace" => $trace
 		];
 
 		global $lastExceptionError, $lastError;
@@ -2188,7 +2258,7 @@ class Server{
 				if(is_string($plugin)){
 					$p = $this->pluginManager->getPlugin($plugin);
 					if($p instanceof Plugin and !($p->getPluginLoader() instanceof PharPluginLoader)){
-						$report = false;
+						$this->logger->debug("Not sending crashdump due to caused by non-phar plugin");
 					}
 				}
 
@@ -2215,6 +2285,7 @@ class Server{
 		//Force minimum uptime to be >= 120 seconds, to reduce the impact of spammy crash loops
 		$spacing = ((int) \pocketmine\START_TIME) - time() + 120;
 		if($spacing > 0){
+			echo "--- Waiting $spacing seconds to throttle automatic restart (you can kill the process safely now) ---" . PHP_EOL;
 			sleep($spacing);
 		}
 		@Utils::kill(getmypid());
@@ -2442,9 +2513,7 @@ class Server{
 				$this->logger->debug("Unhandled raw packet from $address $port: " . bin2hex($payload));
 			}
 		}catch(\Throwable $e){
-			if(\pocketmine\DEBUG > 1){
-				$this->logger->logException($e);
-			}
+			$this->logger->logException($e);
 
 			$this->getNetwork()->blockAddress($address, 600);
 		}
@@ -2531,10 +2600,9 @@ class Server{
 
 		TimingsHandler::tick($this->currentTPS <= $this->profilingTickRate);
 
-		array_shift($this->tickAverage);
-		$this->tickAverage[] = $this->currentTPS;
-		array_shift($this->useAverage);
-		$this->useAverage[] = $this->currentUse;
+		$idx = $this->tickCounter % 20;
+		$this->tickAverage[$idx] = $this->currentTPS;
+		$this->useAverage[$idx] = $this->currentUse;
 
 		if(($this->nextTick - $tickTime) < -1){
 			$this->nextTick = $tickTime;

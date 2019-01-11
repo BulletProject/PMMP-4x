@@ -87,6 +87,30 @@ use pocketmine\tile\Container;
 use pocketmine\tile\Tile;
 use pocketmine\timings\Timings;
 use pocketmine\utils\ReversePriorityQueue;
+use function abs;
+use function array_fill_keys;
+use function array_map;
+use function array_merge;
+use function array_sum;
+use function assert;
+use function cos;
+use function count;
+use function floor;
+use function get_class;
+use function gettype;
+use function is_a;
+use function is_array;
+use function is_object;
+use function lcg_value;
+use function max;
+use function microtime;
+use function min;
+use function mt_rand;
+use function strtolower;
+use function trim;
+use const INT32_MAX;
+use const INT32_MIN;
+use const M_PI;
 
 #include <rules/Level.h>
 
@@ -686,7 +710,9 @@ class Level implements ChunkManager, Metadatable{
 	}
 
 	public function unregisterChunkLoader(ChunkLoader $loader, int $chunkX, int $chunkZ){
-		if(isset($this->chunkLoaders[$index = Level::chunkHash($chunkX, $chunkZ)][$hash = $loader->getLoaderId()])){
+		$index = Level::chunkHash($chunkX, $chunkZ);
+		$hash = $loader->getLoaderId();
+		if(isset($this->chunkLoaders[$index][$hash])){
 			unset($this->chunkLoaders[$index][$hash]);
 			unset($this->playerLoaders[$index][$hash]);
 			if(count($this->chunkLoaders[$index]) === 0){
@@ -1346,9 +1372,9 @@ class Level implements ChunkManager, Metadatable{
 	}
 
 	/**
-	 * @param $x
-	 * @param $y
-	 * @param $z
+	 * @param int $x
+	 * @param int $y
+	 * @param int $z
 	 *
 	 * @return int bitmap, (id << 4) | data
 	 */
@@ -2079,7 +2105,7 @@ class Level implements ChunkManager, Metadatable{
 	}
 
 	/**
-	 * @param $tileId
+	 * @param int $tileId
 	 *
 	 * @return Tile|null
 	 */
@@ -2185,7 +2211,9 @@ class Level implements ChunkManager, Metadatable{
 		if(!$this->isInWorld($x, $y, $z)){ //TODO: bad hack but fixing this requires BC breaks to do properly :(
 			return;
 		}
-		unset($this->blockCache[$chunkHash = Level::chunkHash($x >> 4, $z >> 4)][$blockHash = Level::blockHash($x, $y, $z)]);
+		$chunkHash = Level::chunkHash($x >> 4, $z >> 4);
+		$blockHash = Level::blockHash($x, $y, $z);
+		unset($this->blockCache[$chunkHash][$blockHash]);
 		$this->getChunk($x >> 4, $z >> 4, true)->setBlockId($x & 0x0f, $y, $z & 0x0f, $id & 0xff);
 
 		if(!isset($this->changedBlocks[$chunkHash])){
@@ -2222,7 +2250,9 @@ class Level implements ChunkManager, Metadatable{
 		if(!$this->isInWorld($x, $y, $z)){ //TODO: bad hack but fixing this requires BC breaks to do properly :(
 			return;
 		}
-		unset($this->blockCache[$chunkHash = Level::chunkHash($x >> 4, $z >> 4)][$blockHash = Level::blockHash($x, $y, $z)]);
+		$chunkHash = Level::chunkHash($x >> 4, $z >> 4);
+		$blockHash = Level::blockHash($x, $y, $z);
+		unset($this->blockCache[$chunkHash][$blockHash]);
 
 		$this->getChunk($x >> 4, $z >> 4, true)->setBlockData($x & 0x0f, $y, $z & 0x0f, $data & 0x0f);
 

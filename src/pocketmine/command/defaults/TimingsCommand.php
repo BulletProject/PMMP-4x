@@ -43,33 +43,6 @@ class TimingsCommand extends VanillaCommand{
 	}
 
 	public function execute(CommandSender $sender, string $commandLabel, array $args){
-		if(!$this->testPermission($sender)){
-			return true;
-		}
-
-		if(count($args) !== 1){
-			throw new InvalidCommandSyntaxException();
-		}
-
-		$mode = strtolower($args[0]);
-
-		if($mode === "on"){
-			TimingsHandler::setEnabled();
-			$sender->sendMessage(new TranslationContainer("pocketmine.command.timings.enable"));
-
-			return true;
-		}elseif($mode === "off"){
-			TimingsHandler::setEnabled(false);
-			$sender->sendMessage(new TranslationContainer("pocketmine.command.timings.disable"));
-			return true;
-		}
-
-		if(!TimingsHandler::isEnabled()){
-			$sender->sendMessage(new TranslationContainer("pocketmine.command.timings.timingsDisabled"));
-
-			return true;
-		}
-
-		$paste = $mode === "paste";
+		return true;
 	}
 }

@@ -27,6 +27,10 @@ declare(strict_types=1);
 namespace pocketmine\network\upnp;
 
 use pocketmine\utils\Utils;
+use function class_exists;
+use function gethostbyname;
+use function is_object;
+use function trim;
 
 abstract class UPnP{
 
