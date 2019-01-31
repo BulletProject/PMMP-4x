@@ -31,7 +31,6 @@ use pocketmine\lang\BaseLang;
 use pocketmine\utils\Config;
 use function base64_encode;
 use function fgets;
-use function gethostbyname;
 use function random_bytes;
 use function sleep;
 use function strtolower;
@@ -75,10 +74,6 @@ class SetupWizard{
 			}
 		}while($lang === null);
 
-		$config = new Config(\pocketmine\DATA . "server.properties", Config::PROPERTIES);
-		$config->set("language", $lang);
-		$config->save();
-
 		$this->lang = new BaseLang($lang);
 
 		$this->message($this->lang->get("language_has_been_selected"));
@@ -86,6 +81,11 @@ class SetupWizard{
 		if(!$this->showLicense()){
 			return false;
 		}
+
+		//this has to happen here to prevent user avoiding agreeing to license
+		$config = new Config(\pocketmine\DATA . "server.properties", Config::PROPERTIES);
+		$config->set("language", $lang);
+		$config->save();
 
 		if(strtolower($this->getInput($this->lang->get("skip_installer"), "n", "y/N")) === "y"){
 			return true;
@@ -215,10 +215,6 @@ LICENSE;
 
 		$config->save();
 
-
-		$this->message($this->lang->get("ip_get"));
-
-		$this->error($this->lang->get("ip_confirm"));
 		$this->readLine();
 	}
 

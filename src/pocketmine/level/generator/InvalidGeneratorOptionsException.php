@@ -21,22 +21,8 @@
 
 declare(strict_types=1);
 
-/**
- * UPnP port forwarding support. Only for Windows
- */
-namespace pocketmine\network\upnp;
+namespace pocketmine\level\generator;
 
-use pocketmine\utils\Utils;
-use function class_exists;
-use function is_object;
+class InvalidGeneratorOptionsException extends \UnexpectedValueException{
 
-abstract class UPnP{
-
-	public static function PortForward(int $port) : void{
-		return false;
-	}
-
-	public static function RemovePortForward(int $port) : bool{
-		return false;
-	}
 }

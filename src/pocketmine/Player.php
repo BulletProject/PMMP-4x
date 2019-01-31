@@ -26,6 +26,7 @@ namespace pocketmine;
 use pocketmine\block\Bed;
 use pocketmine\block\Block;
 use pocketmine\block\BlockFactory;
+use pocketmine\block\UnknownBlock;
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
 use pocketmine\entity\Effect;
@@ -185,6 +186,7 @@ use function min;
 use function preg_match;
 use function round;
 use function spl_object_hash;
+use function sqrt;
 use function strlen;
 use function strpos;
 use function strtolower;
@@ -475,8 +477,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	}
 
 	public function setFlying(bool $value){
-		$this->flying = $value;
-		$this->sendSettings();
+		if($this->flying !== $value){
+			$this->flying = $value;
+			$this->resetFallDistance();
+			$this->sendSettings();
+		}
 	}
 
 	public function isFlying() : bool{
@@ -688,14 +693,14 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 		$this->perm->recalculatePermissions();
 
-		if($this->hasPermission(Server::BROADCAST_CHANNEL_USERS)){
-			$permManager->subscribeToPermission(Server::BROADCAST_CHANNEL_USERS, $this);
-		}
-		if($this->hasPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE)){
-			$permManager->subscribeToPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE, $this);
-		}
-
 		if($this->spawned){
+			if($this->hasPermission(Server::BROADCAST_CHANNEL_USERS)){
+				$permManager->subscribeToPermission(Server::BROADCAST_CHANNEL_USERS, $this);
+			}
+			if($this->hasPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE)){
+				$permManager->subscribeToPermission(Server::BROADCAST_CHANNEL_ADMINISTRATIVE, $this);
+			}
+
 			$this->sendCommandData();
 		}
 	}
@@ -1405,18 +1410,16 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 		$this->allowFlight = $this->isCreative();
 		if($this->isSpectator()){
-			$this->flying = true;
+			$this->setFlying(true);
 			$this->keepMovement = true;
 			$this->despawnFromAll();
 		}else{
 			$this->keepMovement = $this->allowMovementCheats;
 			if($this->isSurvival()){
-				$this->flying = false;
+				$this->setFlying(false);
 			}
 			$this->spawnToAll();
 		}
-
-		$this->resetFallDistance();
 
 		$this->namedtag->setInt("playerGameType", $this->gamemode);
 		if(!$client){ //Gamemode changed by server, do not send for client changes
@@ -1630,7 +1633,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				}else{
 					$this->broadcastMovement();
 
-					$distance = $from->distance($to);
+					$distance = sqrt((($from->x - $to->x) ** 2) + (($from->z - $to->z) ** 2));
 					//TODO: check swimming (adds 0.015 exhaustion in MCPE)
 					if($this->isSprinting()){
 						$this->exhaust(0.1 * $distance, PlayerExhaustEvent::CAUSE_SPRINTING);
@@ -1659,6 +1662,12 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		}
 
 		$this->newPosition = null;
+	}
+
+	public function fall(float $fallDistance) : void{
+		if(!$this->flying){
+			parent::fall($fallDistance);
+		}
 	}
 
 	public function jump() : void{
@@ -2697,6 +2706,9 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 	public function handleBlockPickRequest(BlockPickRequestPacket $packet) : bool{
 		$block = $this->level->getBlockAt($packet->blockX, $packet->blockY, $packet->blockZ);
+		if($block instanceof UnknownBlock){
+			return true;
+		}
 
 		$item = $block->getPickedItem();
 		if($packet->addUserData){
@@ -2921,8 +2933,9 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			$ev->call();
 			if($ev->isCancelled()){
 				$this->sendSettings();
-			}else{
+			}else{ //don't use setFlying() here, to avoid feedback loops
 				$this->flying = $ev->isFlying();
+				$this->resetFallDistance();
 			}
 
 			$handled = true;
@@ -3864,13 +3877,13 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	 * @param Inventory $inventory
 	 * @param bool      $force Forces removal of permanent windows such as normal inventory, cursor
 	 *
-	 * @throws \BadMethodCallException if trying to remove a fixed inventory window without the `force` parameter as true
+	 * @throws \InvalidArgumentException if trying to remove a fixed inventory window without the `force` parameter as true
 	 */
 	public function removeWindow(Inventory $inventory, bool $force = false){
 		$id = $this->windows[$hash = spl_object_hash($inventory)] ?? null;
 
 		if($id !== null and !$force and isset($this->permanentWindows[$id])){
-			throw new \BadMethodCallException("Cannot remove fixed window $id (" . get_class($inventory) . ") from " . $this->getName());
+			throw new \InvalidArgumentException("Cannot remove fixed window $id (" . get_class($inventory) . ") from " . $this->getName());
 		}
 
 		$inventory->close($this);
