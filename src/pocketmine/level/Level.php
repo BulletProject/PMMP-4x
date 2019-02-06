@@ -568,7 +568,8 @@ class Level implements ChunkManager, Metadatable{
 	}
 
 	/**
-	 * @internal DO NOT use this from plugins, it's for internal use only. Use Server->unloadLevel() instead.
+	 * @internal
+	 * @see Server::unloadLevel()
 	 *
 	 * Unloads the current level from memory safely
 	 *
@@ -616,7 +617,10 @@ class Level implements ChunkManager, Metadatable{
 	}
 
 	/**
-	 * Gets the players being used in a specific chunk
+	 * @deprecated WARNING: This function has a misleading name. Contrary to what the name might imply, this function
+	 * DOES NOT return players who are IN a chunk, rather, it returns players who can SEE the chunk.
+	 *
+	 * Returns a list of players who have the target chunk within their view distance.
 	 *
 	 * @param int $chunkX
 	 * @param int $chunkZ
@@ -743,8 +747,7 @@ class Level implements ChunkManager, Metadatable{
 	}
 
 	/**
-	 * WARNING: Do not use this, it's only for internal use.
-	 * Changes to this function won't be recorded on the version.
+	 * @internal
 	 */
 	public function checkTime(){
 		if($this->stopTime){
@@ -755,8 +758,7 @@ class Level implements ChunkManager, Metadatable{
 	}
 
 	/**
-	 * WARNING: Do not use this, it's only for internal use.
-	 * Changes to this function won't be recorded on the version.
+	 * @internal
 	 *
 	 * @param Player ...$targets If empty, will send to all players in the level.
 	 */
@@ -768,8 +770,7 @@ class Level implements ChunkManager, Metadatable{
 	}
 
 	/**
-	 * WARNING: Do not use this, it's only for internal use.
-	 * Changes to this function won't be recorded on the version.
+	 * @internal
 	 *
 	 * @param int $currentTick
 	 *
@@ -2490,8 +2491,10 @@ class Level implements ChunkManager, Metadatable{
 		$oldChunk = $this->getChunk($chunkX, $chunkZ, false);
 		if($oldChunk !== null and $oldChunk !== $chunk){
 			if($deleteEntitiesAndTiles){
-				$players = $this->getChunkPlayers($chunkX, $chunkZ);
-				foreach($players as $player){
+				foreach($oldChunk->getEntities() as $player){
+					if(!($player instanceof Player)){
+						continue;
+					}
 					$chunk->addEntity($player);
 					$oldChunk->removeEntity($player);
 					$player->chunk = $chunk;
@@ -2836,6 +2839,7 @@ class Level implements ChunkManager, Metadatable{
 				$loader->onChunkLoaded($chunk);
 			}
 		}else{
+			$this->server->getLogger()->debug("Newly loaded chunk $x $z has no loaders registered, will be unloaded at next available opportunity");
 			$this->unloadChunkRequest($x, $z);
 		}
 
