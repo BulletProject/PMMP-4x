@@ -40,7 +40,6 @@ namespace pocketmine {
 	const BASE_VERSION = "3.6.5";
 	const IS_DEVELOPMENT_BUILD = true;
 	const BUILD_NUMBER = 0;
-
 	const MIN_PHP_VERSION = "7.2.0";
 
 	function critical_error($message){
