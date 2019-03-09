@@ -127,7 +127,6 @@ use function getopt;
 use function gettype;
 use function implode;
 use function ini_get;
-use function ini_set;
 use function is_array;
 use function is_bool;
 use function is_dir;
@@ -1545,8 +1544,6 @@ class Server{
 				$this->logger->warning("Debugging assertions are enabled, this may impact on performance. To disable them, set `zend.assertions = -1` in php.ini.");
 			}
 
-			ini_set('assert.exception', '1');
-
 			if($this->logger instanceof MainLogger){
 				$this->logger->setLogDebug(\pocketmine\DEBUG > 1);
 			}
@@ -2235,8 +2232,6 @@ class Server{
 
 		$this->hasStopped = false;
 
-		ini_set("error_reporting", '0');
-		ini_set("memory_limit", '-1'); //Fix error dump not dumped on memory problems
 		try{
 			$this->logger->emergency($this->getLanguage()->translateString("pocketmine.crash.create"));
 			$dump = new CrashDump($this);

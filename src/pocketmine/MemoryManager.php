@@ -42,7 +42,6 @@ use function get_class;
 use function get_declared_classes;
 use function implode;
 use function ini_get;
-use function ini_set;
 use function is_array;
 use function is_object;
 use function is_resource;
@@ -144,11 +143,6 @@ class MemoryManager{
 
 		$hardLimit = ((int) $this->server->getProperty("memory.main-hard-limit", $defaultMemory));
 
-		if($hardLimit <= 0){
-			ini_set("memory_limit", '-1');
-		}else{
-			ini_set("memory_limit", $hardLimit . "M");
-		}
 
 		$this->globalMemoryLimit = ((int) $this->server->getProperty("memory.global-limit", 0)) * 1024 * 1024;
 		$this->checkRate = (int) $this->server->getProperty("memory.check-rate", 20);
@@ -323,7 +317,6 @@ class MemoryManager{
 	 */
 	public static function dumpMemory($startingObject, string $outputFolder, int $maxNesting, int $maxStringSize, \Logger $logger){
 		$hardLimit = ini_get('memory_limit');
-		ini_set('memory_limit', '-1');
 		gc_disable();
 
 		if(!file_exists($outputFolder)){
@@ -466,7 +459,6 @@ class MemoryManager{
 
 		$logger->info("[Dump] Finished!");
 
-		ini_set('memory_limit', $hardLimit);
 		gc_enable();
 	}
 
