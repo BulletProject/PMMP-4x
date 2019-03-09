@@ -39,7 +39,7 @@ namespace pocketmine {
 	const NAME = "PocketMine-MP";
 	const BASE_VERSION = "3.6.5";
 	const IS_DEVELOPMENT_BUILD = false;
-	const BUILD_NUMBER = 1;
+	const BUILD_NUMBER = 2;
 	const MIN_PHP_VERSION = "7.2.0";
 
 	function critical_error($message){
