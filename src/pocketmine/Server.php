@@ -93,13 +93,11 @@ use pocketmine\plugin\PluginManager;
 use pocketmine\plugin\ScriptPluginLoader;
 use pocketmine\resourcepacks\ResourcePackManager;
 use pocketmine\scheduler\AsyncPool;
-use pocketmine\scheduler\SendUsageTask;
 use pocketmine\snooze\SleeperHandler;
 use pocketmine\snooze\SleeperNotifier;
 use pocketmine\tile\Tile;
 use pocketmine\timings\Timings;
 use pocketmine\timings\TimingsHandler;
-use pocketmine\updater\AutoUpdater;
 use pocketmine\utils\Config;
 use pocketmine\utils\MainLogger;
 use pocketmine\utils\Terminal;
@@ -131,7 +129,6 @@ use function getopt;
 use function gettype;
 use function implode;
 use function ini_get;
-use function ini_set;
 use function is_array;
 use function is_bool;
 use function is_dir;
@@ -244,8 +241,6 @@ class Server{
 	/** @var bool */
 	private $doTitleTick = true;
 
-	/** @var int */
-	private $sendUsageTicker = 0;
 
 	/** @var bool */
 	private $dispatchSignals = false;
@@ -707,13 +702,6 @@ class Server{
 	}
 
 	/**
-	 * @return AutoUpdater
-	 */
-	public function getUpdater(){
-		return $this->updater;
-	}
-
-	/**
 	 * @return PluginManager
 	 */
 	public function getPluginManager(){
@@ -1117,7 +1105,7 @@ class Server{
 	 */
 	public function unloadLevel(Level $level, bool $forceUnload = false) : bool{
 		if($level === $this->getDefaultLevel() and !$forceUnload){
-			throw new \InvalidStateException("The default level cannot be unloaded while running, please switch levels.");
+			throw new \InvalidStateException("The default world cannot be unloaded while running, please switch worlds.");
 		}
 
 		return $level->unload($forceUnload);
@@ -1143,7 +1131,7 @@ class Server{
 	 */
 	public function loadLevel(string $name) : bool{
 		if(trim($name) === ""){
-			throw new LevelException("Invalid empty level name");
+			throw new LevelException("Invalid empty world name");
 		}
 		if($this->isLevelLoaded($name)){
 			return true;
@@ -1201,7 +1189,7 @@ class Server{
 		if(($providerClass = LevelProviderManager::getProviderByName($this->getProperty("level-settings.default-format", "pmanvil"))) === null){
 			$providerClass = LevelProviderManager::getProviderByName("pmanvil");
 			if($providerClass === null){
-				throw new \InvalidStateException("Default level provider has not been registered");
+				throw new \InvalidStateException("Default world provider has not been registered");
 			}
 		}
 
@@ -1634,8 +1622,6 @@ class Server{
 				$this->logger->warning("Debugging assertions are enabled, this may impact on performance. To disable them, set `zend.assertions = -1` in php.ini.");
 			}
 
-			ini_set('assert.exception', '1');
-
 			if($this->logger instanceof MainLogger){
 				$this->logger->setLogDebug(\pocketmine\DEBUG > 1);
 			}
@@ -1793,9 +1779,7 @@ class Server{
 			$this->queryRegenerateTask = new QueryRegenerateEvent($this, 5);
 
 			$this->pluginManager->loadPlugins($this->pluginPath);
-
-			$this->updater = new AutoUpdater($this, $this->getProperty("auto-updater.host", "update.pmmp.io"));
-
+			
 			$this->enablePlugins(PluginLoadOrder::STARTUP);
 
 			$this->network->registerInterface(new RakLibInterface($this));
@@ -2149,7 +2133,7 @@ class Server{
 	}
 
 	public function reload(){
-		$this->logger->info("Saving levels...");
+		$this->logger->info("Saving worlds...");
 
 		foreach($this->levels as $level){
 			$level->save();
@@ -2202,9 +2186,6 @@ class Server{
 		}
 
 		try{
-			if(!$this->isRunning()){
-				$this->sendUsage(SendUsageTask::TYPE_CLOSE);
-			}
 
 			$this->hasStopped = true;
 
@@ -2227,7 +2208,7 @@ class Server{
 				$player->close($player->getLeaveMessage(), $this->getProperty("settings.shutdown-message", "Server closed"));
 			}
 
-			$this->getLogger()->debug("Unloading all levels");
+			$this->getLogger()->debug("Unloading all worlds");
 			foreach($this->getLevels() as $level){
 				$this->unloadLevel($level, true);
 			}
@@ -2287,11 +2268,6 @@ class Server{
 
 		foreach($this->getIPBans()->getEntries() as $entry){
 			$this->network->blockAddress($entry->getName(), -1);
-		}
-
-		if($this->getProperty("settings.send-usage", true)){
-			$this->sendUsageTicker = 6000;
-			$this->sendUsage(SendUsageTask::TYPE_OPEN);
 		}
 
 
@@ -2368,13 +2344,9 @@ class Server{
 		if(!$this->isRunning){
 			return;
 		}
-		if($this->sendUsageTicker > 0){
-			$this->sendUsage(SendUsageTask::TYPE_CLOSE);
-		}
+
 		$this->hasStopped = false;
 
-		ini_set("error_reporting", '0');
-		ini_set("memory_limit", '-1'); //Fix error dump not dumped on memory problems
 		try{
 			$this->logger->emergency($this->getLanguage()->translateString("pocketmine.crash.create"));
 			$dump = new CrashDump($this);
@@ -2408,21 +2380,6 @@ class Server{
 					$report = false; //Don't send crashdumps for locally modified builds
 				}
 
-				if($report){
-					$url = ($this->getProperty("auto-report.use-https", true) ? "https" : "http") . "://" . $this->getProperty("auto-report.host", "crash.pmmp.io") . "/submit/api";
-					$reply = Internet::postURL($url, [
-						"report" => "yes",
-						"name" => $this->getName() . " " . $this->getPocketMineVersion(),
-						"email" => "crash@pocketmine.net",
-						"reportPaste" => base64_encode($dump->getEncodedData())
-					]);
-
-					if($reply !== false and ($data = json_decode($reply)) !== null and isset($data->crashId) and isset($data->crashUrl)){
-						$reportId = $data->crashId;
-						$reportUrl = $data->crashUrl;
-						$this->logger->emergency($this->getLanguage()->translateString("pocketmine.crash.archive", [$reportUrl, $reportId]));
-					}
-				}
 			}
 		}catch(\Throwable $e){
 			$this->logger->logException($e);
@@ -2464,9 +2421,6 @@ class Server{
 	}
 
 	public function onPlayerLogin(Player $player){
-		if($this->sendUsageTicker > 0){
-			$this->uniquePlayers[$player->getRawUniqueId()] = $player->getRawUniqueId();
-		}
 
 		$this->loggedInPlayers[$player->getRawUniqueId()] = $player;
 	}
@@ -2581,13 +2535,6 @@ class Server{
 			}
 			Timings::$worldSaveTimer->stopTiming();
 		}
-	}
-
-	public function sendUsage($type = SendUsageTask::TYPE_STATUS){
-		if((bool) $this->getProperty("anonymous-statistics.enabled", true)){
-			$this->asyncPool->submitTask(new SendUsageTask($this, $type, $this->uniquePlayers));
-		}
-		$this->uniquePlayers = [];
 	}
 
 
@@ -2719,10 +2666,6 @@ class Server{
 			$this->getLogger()->debug("[Auto Save] Save completed in " . round(microtime(true) - $start, 3) . "s");
 		}
 
-		if($this->sendUsageTicker > 0 and --$this->sendUsageTicker === 0){
-			$this->sendUsageTicker = 6000;
-			$this->sendUsage(SendUsageTask::TYPE_STATUS);
-		}
 
 		if(($this->tickCounter % 100) === 0){
 			foreach($this->levels as $level){

@@ -34,51 +34,10 @@ use function is_object;
 abstract class UPnP{
 
 	public static function PortForward(int $port) : void{
-		if(!Internet::$online){
-			throw new \RuntimeException("Server is offline");
-		}
-		if(Utils::getOS() !== "win"){
-			throw new \RuntimeException("UPnP is only supported on Windows");
-		}
-		if(!class_exists("COM")){
-			throw new \RuntimeException("UPnP requires the com_dotnet extension");
-		}
-
-		$myLocalIP = Internet::getInternalIP();
-
-		/** @noinspection PhpUndefinedClassInspection */
-		$com = new \COM("HNetCfg.NATUPnP");
-		/** @noinspection PhpUndefinedFieldInspection */
-
-		if($com === false or !is_object($com->StaticPortMappingCollection)){
-			throw new \RuntimeException("Failed to portforward using UPnP. Ensure that network discovery is enabled in Control Panel.");
-		}
-
-		/** @noinspection PhpUndefinedFieldInspection */
-		$com->StaticPortMappingCollection->Add($port, "UDP", $port, $myLocalIP, true, "PocketMine-MP");
+		return false;
 	}
 
 	public static function RemovePortForward(int $port) : bool{
-		if(!Internet::$online){
-			return false;
-		}
-		if(Utils::getOS() != "win" or !class_exists("COM")){
-			return false;
-		}
-
-		try{
-			/** @noinspection PhpUndefinedClassInspection */
-			$com = new \COM("HNetCfg.NATUPnP");
-			/** @noinspection PhpUndefinedFieldInspection */
-			if($com === false or !is_object($com->StaticPortMappingCollection)){
-				return false;
-			}
-			/** @noinspection PhpUndefinedFieldInspection */
-			$com->StaticPortMappingCollection->Remove($port, "UDP");
-		}catch(\Throwable $e){
-			return false;
-		}
-
-		return true;
+		return false;
 	}
 }

@@ -1,14 +1,12 @@
 players/*
 worlds/*
 plugin_data/*
-plugins/*
 bin*/*
 maps/*
 timings/*
 crashdumps/*
 *.log
 *.txt
-*.phar
 server.properties
 /pocketmine.yml
 /altay.yml

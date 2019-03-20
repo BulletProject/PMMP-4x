@@ -38,7 +38,7 @@ namespace pocketmine {
 
 	const NAME = "Altay";
 	const BASE_VERSION = "3.6.5";
-	const IS_DEVELOPMENT_BUILD = true;
+	const IS_DEVELOPMENT_BUILD = false;
 	const BUILD_NUMBER = 0;
 
 	const MIN_PHP_VERSION = "7.2.0";
@@ -171,13 +171,6 @@ namespace pocketmine {
 
 	set_time_limit(0); //Who set it to 30 seconds?!?!
 
-	ini_set("allow_url_fopen", '1');
-	ini_set("display_errors", '1');
-	ini_set("display_startup_errors", '1');
-	ini_set("default_charset", "utf-8");
-
-	ini_set("memory_limit", '-1');
-
 	define('pocketmine\RESOURCE_PATH', \pocketmine\PATH . 'src' . DIRECTORY_SEPARATOR . 'pocketmine' . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR);
 
 	$opts = getopt("", ["data:", "plugins:", "no-wizard"]);
@@ -232,7 +225,6 @@ namespace pocketmine {
 
 
 	@define("INT32_MASK", is_int(0xffffffff) ? 0xffffffff : -1);
-	@ini_set("opcache.mmap_base", bin2hex(random_bytes(8))); //Fix OPCache address errors
 
 	$exitCode = 0;
 	do{
