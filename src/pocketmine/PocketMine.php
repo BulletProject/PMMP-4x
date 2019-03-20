@@ -37,9 +37,16 @@ namespace pocketmine {
 	use pocketmine\wizard\SetupWizard;
 
 	const NAME = "PocketMine-MP";
+<<<<<<< HEAD
 	const BASE_VERSION = "3.6.5";
 	const IS_DEVELOPMENT_BUILD = false;
 	const BUILD_NUMBER = 2;
+=======
+	const BASE_VERSION = "3.6.6";
+	const IS_DEVELOPMENT_BUILD = true;
+	const BUILD_NUMBER = 0;
+
+>>>>>>> pmmp/3.6
 	const MIN_PHP_VERSION = "7.2.0";
 
 	function critical_error($message){
