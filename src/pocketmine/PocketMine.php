@@ -37,9 +37,9 @@ namespace pocketmine {
 	use pocketmine\wizard\SetupWizard;
 
 	const NAME = "PocketMine-MP";
-	const BASE_VERSION = "3.6.6";
+	const BASE_VERSION = "3.7.0";
 	const IS_DEVELOPMENT_BUILD = false;
-	const BUILD_NUMBER = 1;
+	const BUILD_NUMBER = 0;
 
 	const MIN_PHP_VERSION = "7.2.0";
 
