@@ -1,6 +1,7 @@
 players/*
 worlds/*
 plugin_data/*
+plugins/Altay/*
 bin*/*
 maps/*
 timings/*
