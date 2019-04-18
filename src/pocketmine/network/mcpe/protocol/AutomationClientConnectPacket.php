@@ -21,24 +21,27 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\entity;
+namespace pocketmine\network\mcpe\protocol;
 
-use pocketmine\event\entity\EntityDamageEvent;
+#include <rules/DataPacket.h>
 
-abstract class WaterAnimal extends Mob implements Ageable{
+use pocketmine\network\mcpe\NetworkSession;
 
-	public const SPAWN_PLACEMENT_TYPE = SpawnPlacementTypes::PLACEMENT_TYPE_IN_WATER;
+class AutomationClientConnectPacket extends DataPacket{
+	public const NETWORK_ID = ProtocolInfo::AUTOMATION_CLIENT_CONNECT_PACKET;
 
-	public function isBaby() : bool{
-		return $this->getGenericFlag(self::DATA_FLAG_BABY);
+	/** @var string */
+	public $serverUri;
+
+	protected function decodePayload(){
+		$this->serverUri = $this->getString();
 	}
 
-	public function canBreathe() : bool{
-		return $this->isUnderwater();
+	protected function encodePayload(){
+		$this->putString($this->serverUri);
 	}
 
-	public function onAirExpired() : void{
-		$ev = new EntityDamageEvent($this, EntityDamageEvent::CAUSE_SUFFOCATION, 2);
-		$this->attack($ev);
+	public function handle(NetworkSession $session) : bool{
+		return $session->handleAutomationClientConnect($this);
 	}
 }

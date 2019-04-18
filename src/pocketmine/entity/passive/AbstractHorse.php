@@ -25,11 +25,13 @@ declare(strict_types=1);
 namespace pocketmine\entity\passive;
 
 use pocketmine\entity\Attribute;
+use pocketmine\entity\EntityIds;
 use pocketmine\entity\Tamable;
 use pocketmine\item\Saddle;
 use pocketmine\item\Item;
 use pocketmine\item\ItemFactory;
 use pocketmine\math\Vector3;
+use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 use pocketmine\network\mcpe\protocol\UpdateAttributesPacket;
 use pocketmine\Player;
 use function boolval;
@@ -53,6 +55,7 @@ abstract class AbstractHorse extends Tamable{
 				$jumpPowerIn = 0;
 			}else{
 				$this->setRearing(true);
+				$this->rearingCounter = 40; // HACK!
 			}
 
 			if($jumpPowerIn >= 90){
@@ -64,7 +67,7 @@ abstract class AbstractHorse extends Tamable{
 	}
 
 	protected function initEntity() : void{
-		$this->setSaddled(boolval($this->namedtag->getByte("Saddle", 0)));
+		$this->setSaddled(boolval($this->namedtag->getByte("Saddled", 0)));
 		$this->setChested(boolval($this->namedtag->getByte("Chested", 0)));
 
 		parent::initEntity();
@@ -103,24 +106,20 @@ abstract class AbstractHorse extends Tamable{
 				$this->setRearing(false);
 			}
 		}
+
+		$rider = $this->getRiddenByEntity();
+		if($rider !== null){
+			$rider->resetFallDistance();
+
+			if($rider->isUnderwater()){
+				$this->throwRider();
+			}
+		}
 	}
 
 	public function onInteract(Player $player, Item $item, Vector3 $clickPos) : bool{
 		if(!$this->isImmobile()){
-			if($item instanceof Saddle){
-				if(!$this->isSaddled()){
-					if($this->isTamed()){
-						$this->setSaddled(true);
-						if($player->isSurvival()){
-							$item->pop();
-						}
-					}else{
-						$this->rearingCounter = 10;
-						$this->setRearing(true);
-					}
-					return true;
-				}
-			}elseif(!$this->isBaby() and $this->getRiddenByEntity() === null){
+			if(!$this->isBaby() and $this->getRiddenByEntity() === null){
 				$player->mountEntity($this);
 				return true;
 			}
@@ -171,6 +170,13 @@ abstract class AbstractHorse extends Tamable{
 
 	public function setRearing(bool $value) : void{
 		$this->setGenericFlag(self::DATA_FLAG_REARING, $value);
+	}
+
+	public function rearUp() : void{
+		$this->setRearing(true);
+		$this->rearingCounter = 10;
+
+		$this->level->broadcastLevelSoundEvent($this, LevelSoundEventPacket::SOUND_MAD, -1, EntityIds::HORSE);
 	}
 
 	public function sendAttributes(bool $sendAll = false){

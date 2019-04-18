@@ -25,8 +25,10 @@ declare(strict_types=1);
 namespace pocketmine\inventory;
 
 use pocketmine\block\BlockIds;
+use pocketmine\item\Compass;
 use pocketmine\item\Durable;
 use pocketmine\item\EnchantedBook;
+use pocketmine\item\Map;
 use pocketmine\item\TieredTool;
 use pocketmine\item\Item;
 use pocketmine\item\ItemFactory;
@@ -61,14 +63,20 @@ class AnvilInventory extends ContainerInventory implements FakeInventory{
 	}
 
 	/**
+	 * @param Player $player
 	 * @param Item $result
 	 *
 	 * @return bool
 	 */
-	public function onResult(Item $result) : bool{
+	public function onResult(Player $player, Item $result) : bool{
 		$input = $this->getItem(0);
 		$material = $this->getItem(1);
 		$resultE = clone $input;
+		$repairCost = $input->getRepairCost();
+
+		if(($player->isSurvival() and $repairCost >= 63) or ($player->isCreative() and $repairCost >= 2147483647)){
+			return false;
+		}
 
 		// TODO: check xp level cost
 
@@ -82,9 +90,12 @@ class AnvilInventory extends ContainerInventory implements FakeInventory{
 					$resultE->addEnchantment($enchantment);
 				}
 			}
-		}elseif($input instanceof Durable and $material instanceof Durable and $input->equals($material, false, true)){ // item repair
-			/** @var Durable $resultE */
-			$resultE->setDamage(min($input->getDamage() + $material->getDamage(), $resultE->getMaxDurability()));
+		}elseif($input instanceof Durable and $material instanceof Durable and $input->equals($material, false, false)){ // item repair
+			if($input->getDamage() > 0){
+				/** @var Durable $resultE */
+				$f = $material->getDamage() + intval(($input->getMaxDurability() * 12) / 100);
+				$resultE->setDamage(max(0, $resultE->getDamage() - $f));
+			}
 			foreach($material->getEnchantments() as $enchantment){
 				if($resultE->hasEnchantment($enchantment->getId())){
 					if($enchantment->getLevel() > $resultE->getEnchantmentLevel($enchantment->getId())){
@@ -94,6 +105,7 @@ class AnvilInventory extends ContainerInventory implements FakeInventory{
 					$resultE->addEnchantment($enchantment);
 				}
 			}
+			$repairCost += $material->getRepairCost();
 		}elseif($input instanceof TieredTool){ // repairing tiered tool
 			static $tierIds = [
 				TieredTool::TIER_WOODEN => BlockIds::WOODEN_PLANKS,
@@ -108,7 +120,21 @@ class AnvilInventory extends ContainerInventory implements FakeInventory{
 				if($material->equals($targetMaterial)){
 					/** @var TieredTool $resultE */
 					if($input->getDamage() < $input->getMaxDurability()){
-						$resultE->setDamage($resultE->getDamage() + 1);
+						$f = intval(($input->getMaxDurability() * 25) / 100);
+						$resultE->setDamage(max(0, $resultE->getDamage() - $f));
+					}
+				}
+			}
+		}elseif($input instanceof Map){
+			/** @var Map $resultE */
+			if($material instanceof Compass){
+				$resultE->setMapDisplayPlayers(true);
+			}elseif($material->getId() === ItemIds::PAPER){
+				if(($mapData = $resultE->getMapData()) !== null){
+					if($mapData->getScale() < 4){
+						$mapData->setScale($mapData->getScale() + 1);
+					}else{
+						return false;
 					}
 				}
 			}
@@ -119,6 +145,9 @@ class AnvilInventory extends ContainerInventory implements FakeInventory{
 				$resultE->setCustomName($result->getCustomName());
 			}
 		}
+		$repairCost = $repairCost * 2 + 1;
+
+		$resultE->setRepairCost($repairCost);
 
 		if($result->equalsExact($resultE)){
 			$this->clear(0);

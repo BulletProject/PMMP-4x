@@ -28,7 +28,6 @@ use pocketmine\item\Map;
 use pocketmine\level\Level;
 use pocketmine\maps\renderer\MapRenderer;
 use pocketmine\maps\renderer\VanillaMapRenderer;
-use pocketmine\math\Vector2;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\ListTag;
 use pocketmine\nbt\tag\IntArrayTag;
@@ -57,9 +56,6 @@ class MapData{
 	/** @var MapTrackedObject[] */
 	protected $trackedObjects = [];
 
-	/** @var ClientboundMapItemDataPacket|null */
-	protected $cachedDataPacket = null;
-
 	/** @var bool */
 	protected $fullyExplored = false;
 	/** @var bool */
@@ -71,17 +67,23 @@ class MapData{
 	protected $playersMap = [];
 	/** @var MapRenderer[] */
 	protected $renderers = [];
+	/** @var bool */
+	protected $dirty = false;
+
+	/** @var Color[] */
+	protected static $emptyColors = [];
 
 	/**
 	 * MapData constructor.
 	 *
 	 * @param int   $mapId
-	 * @param MapRenderer[] $renderers
+	 * @param MapRenderer[]|null $renderers
 	 */
-	public function __construct(int $mapId, array $renderers = []){
+	public function __construct(int $mapId, ?array $renderers = null){
 		$this->id = $mapId;
-		if(empty($renderers)){
-			$renderers[] = new VanillaMapRenderer();
+
+		if($renderers === null){
+			$renderers = [new VanillaMapRenderer()];
 		}
 		$this->renderers = $renderers;
 
@@ -89,12 +91,11 @@ class MapData{
 			$renderer->initialize($this);
 		}
 
-		$transColor = new Color(0, 0, 0, 0);
-		for($y = 0; $y < 128; $y++){
-			for($x = 0; $x < 128; $x++){
-				$this->setColorAt($x, $y, clone $transColor);
-			}
+		if(empty(self::$emptyColors)){
+			self::$emptyColors = array_fill(0, 128, array_fill(0, 128, new Color(0, 0, 0, 0)));
 		}
+
+		$this->colors = self::$emptyColors;
 	}
 
 	/**
@@ -116,7 +117,7 @@ class MapData{
 	 */
 	public function setDimension(int $dimension) : void{
 		$this->dimension = $dimension;
-		$this->updateMap(ClientboundMapItemDataPacket::BITFLAG_TEXTURE_UPDATE | ClientboundMapItemDataPacket::BITFLAG_DECORATION_UPDATE);
+		$this->markAsDirty();
 	}
 
 	/**
@@ -131,7 +132,7 @@ class MapData{
 	 */
 	public function setScale(int $scale) : void{
 		$this->scale = $scale;
-		$this->updateMap(ClientboundMapItemDataPacket::BITFLAG_TEXTURE_UPDATE | ClientboundMapItemDataPacket::BITFLAG_DECORATION_UPDATE);
+		$this->markAsDirty();
 	}
 
 	/**
@@ -146,7 +147,7 @@ class MapData{
 	 */
 	public function setColors(array $colors) : void{
 		$this->colors = $colors;
-		$this->updateMap(ClientboundMapItemDataPacket::BITFLAG_TEXTURE_UPDATE);
+		$this->markAsDirty();
 	}
 
 	/**
@@ -156,6 +157,7 @@ class MapData{
 	 */
 	public function setColorAt(int $x, int $y, Color $color) : void{
 		$this->colors[$y][$x] = $color;
+		$this->markAsDirty();
 	}
 
 	/**
@@ -165,7 +167,7 @@ class MapData{
 	 * @return Color
 	 */
 	public function getColorAt(int $x, int $y) : Color{
-		return $this->colors[$y][$x] ?? new Color(0, 0, 0);
+		return $this->colors[$y][$x] ?? new Color(0, 0, 0, 0);
 	}
 
 	/**
@@ -175,34 +177,23 @@ class MapData{
 	public function setCenter(int $x, int $z) : void{
 		$this->xCenter = $x;
 		$this->zCenter = $z;
+
+		$this->markAsDirty();
 	}
 
-	/**
-	 * @return Vector2
-	 */
-	public function getCenter() : Vector2{
-		return new Vector2($this->xCenter, $this->zCenter);
+	public function getCenterX() : int{
+		return $this->xCenter;
 	}
 
-	public function calculateMapCenter(int $x, int $z, int $scale) : void{
-		$i = 128 * (1 << $scale);
+	public function getCenterZ() : int{
+		return $this->zCenter;
+	}
+
+	public function calculateMapCenter(int $x, int $z) : void{
+		$i = 128 * (1 << $this->getScale());
 		$j = (int) floor(($x + 64.0) / $i);
 		$k = (int) floor(($z + 64.0) / $i);
 		$this->setCenter($j * $i + $i / 2 - 64, $k * $i + $i / 2 - 64);
-	}
-
-	public function updateMap(int $flags) : void{
-		foreach($this->playersMap as $info){
-			$player = $info->player;
-			if($player->isOnline() and $player->isAlive() and $player->level->getDimension() === $this->dimension){
-				$pk = $this->createDataPacket($flags);
-				if($info->forceUpdate and !empty($pk->colors)){
-					$info->forceUpdate = false;
-					//$pk->cropTexture($info->minX, $info->minY, $info->maxX + 1 - $info->minX, $info->maxY + 1 - $info->minY);
-				}
-				$player->sendDataPacket($pk);
-			}
-		}
 	}
 
 	public function readSaveData(CompoundTag $nbt) : void{
@@ -216,7 +207,9 @@ class MapData{
 			$colors = $nbt->getIntArray("colors");
 			for($y = 0; $y < 128; $y++){
 				for($x = 0; $x < 128; $x++){
-					$this->colors[$y][$x] = Color::fromABGR($colors[$x + $y * 128] ?? 0);
+					if(isset($colors[$x + $y * 128])){
+						$this->colors[$y][$x] = Color::fromABGR($colors[$x + $y * 128]);
+					}
 				}
 			}
 		}
@@ -232,10 +225,12 @@ class MapData{
 			$colors = [];
 			for($y = 0; $y < 128; $y++){
 				for($x = 0; $x < 128; $x++){
-					$color = $this->colors[$y][$x] ?? new Color(0, 0, 0);
-					$colors[$x + $y * 128] = $color->toABGR();
+					if(isset($this->colors[$y]) and isset($this->colors[$y][$x])){
+						$colors[$x + $y * 128] = $this->colors[$y][$x]->toABGR();
+					}
 				}
 			}
+
 			$nbt->setIntArray("colors", $colors, true);
 		}
 	}
@@ -252,7 +247,7 @@ class MapData{
 	 */
 	public function setDecorations(array $decorations) : void{
 		$this->decorations = array_keys($decorations);
-		$this->updateMap(ClientboundMapItemDataPacket::BITFLAG_DECORATION_UPDATE);
+		$this->markAsDirty();
 	}
 
 	/**
@@ -267,24 +262,13 @@ class MapData{
 	 */
 	public function setTrackedObjects(array $trackedObjects) : void{
 		$this->trackedObjects = $trackedObjects;
-		$this->updateMap(ClientboundMapItemDataPacket::BITFLAG_DECORATION_UPDATE);
+		$this->markAsDirty();
 	}
 
-	public function createDataPacket(int $flags) : ClientboundMapItemDataPacket{
-		$pk = new ClientboundMapItemDataPacket();
-		$pk->mapId = $this->id;
-		$pk->dimensionId = $this->dimension;
-		$pk->scale = $this->scale;
-		$pk->width = 128;
-		$pk->height = 128;
-		if(($flags & ClientboundMapItemDataPacket::BITFLAG_DECORATION_UPDATE) !== 0){
-			$pk->decorations = $this->decorations;
-			$pk->trackedEntities = $this->trackedObjects;
+	public function onMapCrated(Player $player) : void{
+		foreach($this->renderers as $renderer){
+			$renderer->onMapCreated($player, $this);
 		}
-		if(($flags & ClientboundMapItemDataPacket::BITFLAG_TEXTURE_UPDATE) !== 0){
-			$pk->colors = $this->colors;
-		}
-		return $pk;
 	}
 
 	/**
@@ -321,6 +305,8 @@ class MapData{
 		foreach($this->playersMap as $info){
 			$info->updateTextureAt($x, $y);
 		}
+
+		$this->markAsDirty();
 	}
 
 	/**
@@ -352,8 +338,8 @@ class MapData{
 		if($mapStack->isMapDisplayPlayers()){
 			foreach($this->playersMap as $info){
 				$pi = $info->player;
-				if($pi->isOnline() and $pi->isAlive() and $pi->level->getDimension() === $this->dimension){
-					if(!$mapStack->isOnItemFrame() and $info->packetSendTimer++ % 5 === 0){
+				if($pi->isOnline() and $pi->isAlive() and $pi->level->getDimension() === $this->dimension and ($pi->getInventory()->contains($mapStack) or $pi->getOffHandInventory()->contains($mapStack))){
+					if(!$mapStack->isOnItemFrame()){
 						$this->updateDecorations(MapDecoration::TYPE_PLAYER, $pi->level, $pi->getName(), $pi->getFloorX(), $pi->getFloorZ(), $pi->getYaw());
 					}
 				}else{
@@ -386,7 +372,7 @@ class MapData{
 	 * @param float      $rotation
 	 * @param Color|null $color
 	 */
-	public function updateDecorations(int $type, Level $worldIn, String $entityIdentifier, int $worldX, int $worldZ, float $rotation, ?Color $color = null){
+	public function updateDecorations(int $type, Level $worldIn, string $entityIdentifier, int $worldX, int $worldZ, float $rotation, ?Color $color = null){
 		$i = 1 << $this->scale;
 		$f = ($worldX - $this->xCenter) / $i;
 		$f1 = ($worldZ - $this->zCenter) / $i;
@@ -438,8 +424,6 @@ class MapData{
 		$deco->label = $entityIdentifier;
 
 		$this->decorations[$entityIdentifier] = $deco;
-
-		$this->updateMap(ClientboundMapItemDataPacket::BITFLAG_DECORATION_UPDATE);
 	}
 
 	/**
@@ -490,5 +474,27 @@ class MapData{
 	 */
 	public function setVirtual(bool $virtual) : void{
 		$this->virtual = $virtual;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public function isDirty() : bool{
+		return $this->dirty;
+	}
+
+	public function markAsDirty() : void{
+		$this->setDirty(true);
+	}
+
+	/**
+	 * @param bool $value
+	 */
+	public function setDirty(bool $value) : void{
+		$this->dirty = $value;
+	}
+
+	public function isEmpty() : bool{
+		return count($this->colors) === 0;
 	}
 }

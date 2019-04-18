@@ -24,10 +24,13 @@ declare(strict_types=1);
 
 namespace pocketmine\item;
 
+use pocketmine\block\Block;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\item\enchantment\Enchantment;
 use pocketmine\item\enchantment\ProtectionEnchantment;
+use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\IntTag;
+use pocketmine\Player;
 use pocketmine\utils\Binary;
 use pocketmine\utils\Color;
 use function lcg_value;
@@ -105,5 +108,16 @@ abstract class Armor extends Durable{
 		}
 
 		return 0;
+	}
+
+	public function onClickAir(Player $player, Vector3 $directionVector) : bool{
+		if($player->getArmorInventory()->getItem($this->getArmorSlot())->isNull()){
+			$player->getArmorInventory()->setItem($this->getArmorSlot(), $this);
+
+			$this->pop();
+
+			return true;
+		}
+		return false;
 	}
 }

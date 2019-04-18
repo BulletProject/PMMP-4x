@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace pocketmine\network\mcpe;
 
 use pocketmine\entity\passive\AbstractHorse;
+use pocketmine\entity\passive\Horse;
 use pocketmine\event\server\DataPacketReceiveEvent;
 use pocketmine\maps\MapData;
 use pocketmine\maps\MapManager;
@@ -50,6 +51,7 @@ use pocketmine\network\mcpe\protocol\MapInfoRequestPacket;
 use pocketmine\network\mcpe\protocol\MobArmorEquipmentPacket;
 use pocketmine\network\mcpe\protocol\MobEquipmentPacket;
 use pocketmine\network\mcpe\protocol\ModalFormResponsePacket;
+use pocketmine\network\mcpe\protocol\MoveEntityAbsolutePacket;
 use pocketmine\network\mcpe\protocol\MovePlayerPacket;
 use pocketmine\network\mcpe\protocol\NetworkStackLatencyPacket;
 use pocketmine\network\mcpe\protocol\PlayerActionPacket;
@@ -221,8 +223,10 @@ class PlayerNetworkSessionAdapter extends NetworkSession{
 		if($this->player->isRiding()){
 			$horse = $this->player->getRidingEntity();
 			if($horse instanceof AbstractHorse){
-				// This is useless for now, only may usable for plugins
-				$horse->setJumpPower($packet->jumpStrength);
+				if($horse->onGround){
+					// This is useless for now, only may usable for plugins
+					$horse->setJumpPower($packet->jumpStrength);
+				}
 				return true;
 			}
 		}
@@ -240,7 +244,18 @@ class PlayerNetworkSessionAdapter extends NetworkSession{
 	public function handleMapInfoRequest(MapInfoRequestPacket $packet) : bool{
 		$data = MapManager::getMapDataById($packet->mapId);
 		if($data instanceof MapData){
-			$this->player->sendDataPacket($data->createDataPacket(ClientboundMapItemDataPacket::BITFLAG_TEXTURE_UPDATE | ClientboundMapItemDataPacket::BITFLAG_DECORATION_UPDATE));
+			// this is for first appearance
+			$pk = new ClientboundMapItemDataPacket();
+			$pk->height = $pk->width = 128;
+			$pk->dimensionId = $data->getDimension();
+			$pk->scale = $data->getScale();
+			$pk->colors = $data->getColors();
+			$pk->mapId = $data->getId();
+			$pk->decorations = $data->getDecorations();
+			$pk->trackedEntities = $data->getTrackedObjects();
+
+			$this->player->sendDataPacket($pk);
+
 			return true;
 		}
 		return false;
@@ -331,18 +346,22 @@ class PlayerNetworkSessionAdapter extends NetworkSession{
 		return $this->player->handleLevelSoundEvent($packet);
 	}
 
-	public function handleSetEntityMotion(SetEntityMotionPacket $packet) : bool{
+	public function handleMoveEntityAbsolute(MoveEntityAbsolutePacket $packet) : bool{
 		// TODO: remove this
 		$target = $this->player->getServer()->findEntity($packet->entityRuntimeId);
 		if($target !== null){
 			if($this->player->isRiding() and $this->player->getRidingEntity() !== null and $this->player->getRidingEntity()->getId() === $target->getId()){
-				$target->setMotion($packet->motion);
+				$target->setPositionAndRotation($packet->position, $packet->yRot, $packet->xRot);
 
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	public function handleSetEntityMotion(SetEntityMotionPacket $packet) : bool{
+		return true; // WTF, spam??
 	}
 
 	public function handleNetworkStackLatency(NetworkStackLatencyPacket $packet) : bool{

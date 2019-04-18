@@ -84,6 +84,7 @@ use pocketmine\inventory\transaction\CraftingTransaction;
 use pocketmine\inventory\transaction\TransactionValidationException;
 use pocketmine\inventory\transaction\InventoryTransaction;
 use pocketmine\inventory\Inventory;
+use pocketmine\inventory\InventoryHolder;
 use pocketmine\item\Consumable;
 use pocketmine\item\Durable;
 use pocketmine\item\enchantment\EnchantmentInstance;
@@ -112,6 +113,7 @@ use pocketmine\network\mcpe\protocol\AnimatePacket;
 use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
 use pocketmine\network\mcpe\protocol\AvailableEntityIdentifiersPacket;
 use pocketmine\network\mcpe\protocol\BatchPacket;
+use pocketmine\network\mcpe\protocol\BiomeDefinitionListPacket;
 use pocketmine\network\mcpe\protocol\BlockEntityDataPacket;
 use pocketmine\network\mcpe\protocol\BlockPickRequestPacket;
 use pocketmine\network\mcpe\protocol\BookEditPacket;
@@ -367,7 +369,8 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	protected $deviceModel;
 	/** @var int $deviceOS */
 	protected $deviceOS;
-
+	/** @var string $deviceId */
+	protected $deviceId;
 	/** @var int */
 	protected $startAction = -1;
 	/** @var int[] ID => ticks map */
@@ -2002,6 +2005,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			$this->locale = $packet->locale;
 		}
 
+		$this->deviceId = $packet->clientData["DeviceId"] ?? null;
 		$this->deviceModel = $packet->clientData["DeviceModel"] ?? null;
 		$this->deviceOS = $packet->clientData["DeviceOS"] ?? null;
 
@@ -2250,7 +2254,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$pk->pitch = $this->pitch;
 		$pk->yaw = $this->yaw;
 		$pk->seed = -1;
-		$pk->dimension = DimensionIds::OVERWORLD; //TODO: implement this properly
+		$pk->dimension = $this->level->getDimension();
 		$pk->worldGamemode = Player::getClientFriendlyGamemode($this->server->getGamemode());
 		$pk->difficulty = $this->level->getDifficulty();
 		$pk->spawnX = $spawnPosition->getFloorX();
@@ -2267,6 +2271,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$this->dataPacket($pk);
 
 		$this->sendDataPacket(new AvailableEntityIdentifiersPacket());
+		$this->sendDataPacket(new BiomeDefinitionListPacket());
 
 		$this->level->sendTime($this);
 
@@ -2871,6 +2876,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		}
 
 		switch($packet->action){
+			case InteractPacket::ACTION_OPEN_INVENTORY:
+				if($target instanceof InventoryHolder){
+					$this->addWindow($target->getInventory());
+				}
+				break;
 			case InteractPacket::ACTION_LEAVE_VEHICLE:
 				if($this->ridingEid === $packet->target){
 					$this->dismountEntity();
@@ -2974,6 +2984,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				$this->stopSleep();
 				break;
 			case PlayerActionPacket::ACTION_RESPAWN:
+			case PlayerActionPacket::ACTION_DIMENSION_CHANGE_REQUEST:
 				if(!$this->spawned or $this->isAlive() or !$this->isOnline()){
 					break;
 				}
@@ -4032,13 +4043,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 	protected function addDefaultWindows(){
 		$this->addWindow($this->getInventory(), ContainerIds::INVENTORY, true);
-
+		$this->addWindow($this->getOffHandInventory(), ContainerIds::OFFHAND, true);
 		$this->addWindow($this->getArmorInventory(), ContainerIds::ARMOR, true);
 
 		$this->cursorInventory = new PlayerCursorInventory($this);
 		$this->addWindow($this->cursorInventory, ContainerIds::CURSOR, true);
-		$this->offHandInventory = new PlayerOffHandInventory($this);
-		$this->addWindow($this->offHandInventory, ContainerIds::OFFHAND, true);
 
 		$this->craftingGrid = new CraftingGrid($this, CraftingGrid::SIZE_SMALL);
 
@@ -4047,10 +4056,6 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 	public function getCursorInventory() : PlayerCursorInventory{
 		return $this->cursorInventory;
-	}
-
-	public function getOffHandInventory() : PlayerOffHandInventory{
-		return $this->offHandInventory;
 	}
 
 	public function getCraftingGrid() : CraftingGrid{
@@ -4268,10 +4273,14 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	}
 
 	public function getDeviceOS(): ?int{
-	    return $this->getDeviceOS();
+	    return $this->deviceOS;
     }
 
     public function getDeviceModel(): ?string{
-	    return $this->getDeviceModel();
+	    return $this->deviceModel;
+    }
+
+    public function getDeviceId(): ?string{
+	    return $this->deviceId;
     }
 }

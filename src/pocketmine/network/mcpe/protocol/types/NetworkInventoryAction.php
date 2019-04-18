@@ -271,7 +271,7 @@ class NetworkInventoryAction{
 						}
 					case self::SOURCE_TYPE_ANVIL_RESULT:
 						if($window instanceof AnvilInventory){
-							if($window->onResult($this->oldItem)){
+							if($window->onResult($player, $this->oldItem)){
 								$window->setItem(2, $this->oldItem, false);
 								return new SlotChangeAction($window, 2, $this->oldItem, $this->newItem);
 							}else{
@@ -325,7 +325,6 @@ class NetworkInventoryAction{
 						}
 				}
 
-				//TODO: more stuff
 				throw new \UnexpectedValueException("Player " . $player->getName() . " has no open container with window ID $this->windowId");
 			default:
 				throw new \UnexpectedValueException("Unknown inventory source type $this->sourceType");

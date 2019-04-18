@@ -1492,30 +1492,37 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	}
 
 	protected function broadcastMovement(bool $teleport = false) : void{
-		$pk = new MoveEntityAbsolutePacket();
-		$pk->entityRuntimeId = $this->id;
-		$pk->position = $this->getOffsetPosition($this);
+		if($this->isValid()){
+			$pk = new MoveEntityAbsolutePacket();
+			$pk->entityRuntimeId = $this->id;
+			$pk->position = $this->getOffsetPosition($this);
 
-		//this looks very odd but is correct as of 1.5.0.7
-		//for arrows this is actually x/y/z rotation
-		//for mobs x and z are used for pitch and yaw, and y is used for headyaw
-		$pk->xRot = $this->pitch;
-		$pk->yRot = $this->yaw; //TODO: head yaw
-		$pk->zRot = $this->yaw;
+			//this looks very odd but is correct as of 1.5.0.7
+			//for arrows this is actually x/y/z rotation
+			//for mobs x and z are used for pitch and yaw, and y is used for headyaw
+			$pk->xRot = $this->pitch;
+			$pk->yRot = $this->yaw; //TODO: head yaw
+			$pk->zRot = $this->yaw;
 
-		if($teleport){
-			$pk->flags |= MoveEntityAbsolutePacket::FLAG_TELEPORT;
+			if($teleport){
+				$pk->flags |= MoveEntityAbsolutePacket::FLAG_TELEPORT;
+			}
+			if($this->onGround){
+				$pk->flags |= MoveEntityAbsolutePacket::FLAG_GROUND;
+			}
+
+			$this->level->broadcastPacketToViewers($this, $pk);
 		}
-
-		$this->level->broadcastPacketToViewers($this, $pk);
 	}
 
 	protected function broadcastMotion() : void{
-		$pk = new SetEntityMotionPacket();
-		$pk->entityRuntimeId = $this->id;
-		$pk->motion = $this->getMotion();
+		if($this->isValid()){
+			$pk = new SetEntityMotionPacket();
+			$pk->entityRuntimeId = $this->id;
+			$pk->motion = $this->getMotion();
 
-		$this->level->broadcastPacketToViewers($this, $pk);
+			$this->level->broadcastPacketToViewers($this, $pk);
+		}
 	}
 
 	/**
@@ -2315,6 +2322,8 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 			$down->onEntityCollideUpon($this);
 		}
 
+		$this->setInPortal($this->level->getBlock($this) instanceof Portal);
+
 		if($vector->lengthSquared() > 0){
 			$vector = $vector->normalize();
 			$d = 0.014;
@@ -2554,9 +2563,9 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 		$pk->metadata = $this->propertyManager->getAll();
 
 		if(!empty($this->passengers)){
-			$pk->links = array_walk($this->passengers, function(int $entityId, int $seatNumber){
+			$pk->links = array_map(function(int $entityId, int $seatNumber){
 				return new EntityLink($this->getId(), $entityId, EntityLink::TYPE_RIDER);
-			});
+			}, $this->passengers, array_keys($this->passengers));
 		}
 
 		$player->sendDataPacket($pk);
