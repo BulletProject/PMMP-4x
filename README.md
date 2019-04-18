@@ -10,13 +10,15 @@ If you don't find what you're looking for there, [talk to a human](#discussion).
 
 ### Discussion
 - [Forums](https://forums.pmmp.io/)
+- [Community Discord](https://discord.gg/bge7dYQ)
 
 ### Plugins
 There are a very wide range of already-written plugins available which you can use to customise your server. Check out [Poggit](https://poggit.pmmp.io), or just search GitHub.
 
 ### For developers
  * [Latest API documentation](https://jenkins.pmmp.io/job/PocketMine-MP-doc/doxygen/) - Doxygen documentation generated from development
- * [DevTools](https://github.com/pmmp/PocketMine-DevTools/) - A development tools plugin for creating plugins.
+ * [DevTools](https://github.com/pmmp/PocketMine-DevTools/) - Development tools plugin for creating plugins
+ * [ExamplePlugin](https://github.com/pmmp/ExamplePlugin/) - Example plugin demonstrating some basic API features
 
 ### Can I contribute?
 Yes you can! Contributions are welcomed provided that they comply with our [Contributing Guidelines](CONTRIBUTING.md). Please ensure you read the relevant sections of the guidelines carefully before making a Pull Request or opening an Issue.
@@ -26,6 +28,12 @@ Yes you can! Contributions are welcomed provided that they comply with our [Cont
 - Latest bleeding-edge development builds (and other builds in the build job channels) can be found on our [Jenkins server](https://jenkins.pmmp.io/).
 
 **Note: Please avoid development builds unless there is no other alternative for what you need.** Development builds are subject to changes at any time without notice, and it is likely that your server or plugins might break without warning.
+
+### Donate
+Donations help support the development of the project and pay for our expenses.
+- Bitcoin Cash (BCH): `qz9p8dqkv0r7aahdatu5uewqfkvstrglv58f8yle07`
+- Bitcoin (BTC): `1PVAyDJ2g7kcjCxAC3C89oxpV2ZYcLad8T`
+- [Patreon](https://www.patreon.com/pocketminemp)
 
 ## Licensing information
 
