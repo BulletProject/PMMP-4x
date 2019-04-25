@@ -36,10 +36,7 @@ namespace pocketmine {
 	use pocketmine\utils\VersionString;
 	use pocketmine\wizard\SetupWizard;
 
-	const NAME = "PocketMine-MP";
-	const BASE_VERSION = "3.7.2";
-	const IS_DEVELOPMENT_BUILD = false;
-	const BUILD_NUMBER = 0;
+	require_once __DIR__ . '/VersionInfo.php';
 
 	const MIN_PHP_VERSION = "7.2.0";
 
@@ -203,6 +200,9 @@ namespace pocketmine {
 
 	if(extension_loaded("xdebug")){
 		$logger->warning(PHP_EOL . PHP_EOL . PHP_EOL . "\tYou are running " . \pocketmine\NAME . " with xdebug enabled. This has a major impact on performance." . PHP_EOL . PHP_EOL);
+	}
+	if(!extension_loaded("pocketmine_chunkutils")){
+		$logger->warning("ChunkUtils extension is missing. Anvil-format worlds will experience degraded performance.");
 	}
 
 	if(\Phar::running(true) === ""){
