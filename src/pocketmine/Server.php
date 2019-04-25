@@ -1780,11 +1780,6 @@ class Server{
 			$this->queryRegenerateTask = new QueryRegenerateEvent($this, 5);
 
 			$this->pluginManager->loadPlugins($this->pluginPath);
-<<<<<<< HEAD
-			
-=======
-
->>>>>>> altay/stable
 			$this->enablePlugins(PluginLoadOrder::STARTUP);
 
 			$this->network->registerInterface(new RakLibInterface($this));
@@ -2191,10 +2186,6 @@ class Server{
 		}
 
 		try{
-<<<<<<< HEAD
-
-=======
->>>>>>> altay/stable
 			$this->hasStopped = true;
 
 			$this->shutdown();
@@ -2278,10 +2269,6 @@ class Server{
 			$this->network->blockAddress($entry->getName(), -1);
 		}
 
-<<<<<<< HEAD
-
-=======
->>>>>>> altay/stable
 		if($this->getProperty("network.upnp-forwarding", false)){
 			$this->logger->info("[UPnP] Trying to port forward...");
 			try{
@@ -2355,10 +2342,6 @@ class Server{
 		if(!$this->isRunning){
 			return;
 		}
-<<<<<<< HEAD
-
-=======
->>>>>>> altay/stable
 		$this->hasStopped = false;
 
 		try{
@@ -2366,38 +2349,6 @@ class Server{
 			$dump = new CrashDump($this);
 
 			$this->logger->emergency($this->getLanguage()->translateString("pocketmine.crash.submit", [$dump->getPath()]));
-<<<<<<< HEAD
-
-			if($this->getProperty("auto-report.enabled", true) !== false){
-				$report = true;
-
-				$stamp = $this->getDataPath() . "crashdumps/.last_crash";
-				$crashInterval = 120; //2 minutes
-				if(file_exists($stamp) and !($report = (filemtime($stamp) + $crashInterval < time()))){
-					$this->logger->debug("Not sending crashdump due to last crash less than $crashInterval seconds ago");
-				}
-				@touch($stamp); //update file timestamp
-
-				$plugin = $dump->getData()["plugin"];
-				if(is_string($plugin)){
-					$p = $this->pluginManager->getPlugin($plugin);
-					if($p instanceof Plugin and !($p->getPluginLoader() instanceof PharPluginLoader)){
-						$this->logger->debug("Not sending crashdump due to caused by non-phar plugin");
-					}
-				}
-
-				if($dump->getData()["error"]["type"] === \ParseError::class){
-					$report = false;
-				}
-
-				if(strrpos(\pocketmine\GIT_COMMIT, "-dirty") !== false or \pocketmine\GIT_COMMIT === str_repeat("00", 20)){
-					$this->logger->debug("Not sending crashdump due to locally modified");
-					$report = false; //Don't send crashdumps for locally modified builds
-				}
-
-			}
-=======
->>>>>>> altay/stable
 		}catch(\Throwable $e){
 			$this->logger->logException($e);
 			try{
@@ -2438,10 +2389,6 @@ class Server{
 	}
 
 	public function onPlayerLogin(Player $player){
-<<<<<<< HEAD
-
-=======
->>>>>>> altay/stable
 		$this->loggedInPlayers[$player->getRawUniqueId()] = $player;
 	}
 
@@ -2557,10 +2504,6 @@ class Server{
 		}
 	}
 
-<<<<<<< HEAD
-
-=======
->>>>>>> altay/stable
 	/**
 	 * @return BaseLang
 	 */
@@ -2690,10 +2633,6 @@ class Server{
 			$this->getLogger()->debug("[Auto Save] Save completed in " . ($time >= 1 ? round($time, 3) . "s" : round($time * 1000) . "ms"));
 		}
 
-<<<<<<< HEAD
-
-=======
->>>>>>> altay/stable
 		if(($this->tickCounter % 100) === 0){
 			foreach($this->levels as $level){
 				$level->clearCache();
