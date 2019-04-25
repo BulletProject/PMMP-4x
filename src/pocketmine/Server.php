@@ -215,9 +215,6 @@ class Server{
 	/** @var float */
 	private $profilingTickRate = 20;
 
-	/** @var AutoUpdater */
-	private $updater = null;
-
 	/** @var AsyncPool */
 	private $asyncPool;
 
@@ -240,7 +237,6 @@ class Server{
 
 	/** @var bool */
 	private $doTitleTick = true;
-
 
 	/** @var bool */
 	private $dispatchSignals = false;
@@ -354,8 +350,6 @@ class Server{
 	private $levelTheEnd = null;
 
 	/** @var bool */
-	public $loadIncompatibleApi = true;
-	/** @var bool */
 	public $keepInventory = false;
 	/** @var bool */
 	public $keepExperience = false;
@@ -365,7 +359,6 @@ class Server{
 	public $mobAiEnabled = true;
 
 	public function loadAltayConfig(){
-		$this->loadIncompatibleApi = $this->getAltayProperty("developer.load-incompatible-api", true);
 		$this->keepInventory = $this->getAltayProperty("player.keep-inventory", false);
 		$this->keepExperience = $this->getAltayProperty("player.keep-experience", false);
 		$this->folderPluginLoader = $this->getAltayProperty("developer.folder-plugin-loader", true);
@@ -1787,7 +1780,11 @@ class Server{
 			$this->queryRegenerateTask = new QueryRegenerateEvent($this, 5);
 
 			$this->pluginManager->loadPlugins($this->pluginPath);
+<<<<<<< HEAD
 			
+=======
+
+>>>>>>> altay/stable
 			$this->enablePlugins(PluginLoadOrder::STARTUP);
 
 			$this->network->registerInterface(new RakLibInterface($this));
@@ -2194,7 +2191,10 @@ class Server{
 		}
 
 		try{
+<<<<<<< HEAD
 
+=======
+>>>>>>> altay/stable
 			$this->hasStopped = true;
 
 			$this->shutdown();
@@ -2278,7 +2278,10 @@ class Server{
 			$this->network->blockAddress($entry->getName(), -1);
 		}
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> altay/stable
 		if($this->getProperty("network.upnp-forwarding", false)){
 			$this->logger->info("[UPnP] Trying to port forward...");
 			try{
@@ -2352,7 +2355,10 @@ class Server{
 		if(!$this->isRunning){
 			return;
 		}
+<<<<<<< HEAD
 
+=======
+>>>>>>> altay/stable
 		$this->hasStopped = false;
 
 		try{
@@ -2360,6 +2366,7 @@ class Server{
 			$dump = new CrashDump($this);
 
 			$this->logger->emergency($this->getLanguage()->translateString("pocketmine.crash.submit", [$dump->getPath()]));
+<<<<<<< HEAD
 
 			if($this->getProperty("auto-report.enabled", true) !== false){
 				$report = true;
@@ -2389,6 +2396,8 @@ class Server{
 				}
 
 			}
+=======
+>>>>>>> altay/stable
 		}catch(\Throwable $e){
 			$this->logger->logException($e);
 			try{
@@ -2429,7 +2438,10 @@ class Server{
 	}
 
 	public function onPlayerLogin(Player $player){
+<<<<<<< HEAD
 
+=======
+>>>>>>> altay/stable
 		$this->loggedInPlayers[$player->getRawUniqueId()] = $player;
 	}
 
@@ -2545,7 +2557,10 @@ class Server{
 		}
 	}
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> altay/stable
 	/**
 	 * @return BaseLang
 	 */
@@ -2675,7 +2690,10 @@ class Server{
 			$this->getLogger()->debug("[Auto Save] Save completed in " . ($time >= 1 ? round($time, 3) . "s" : round($time * 1000) . "ms"));
 		}
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> altay/stable
 		if(($this->tickCounter % 100) === 0){
 			foreach($this->levels as $level){
 				$level->clearCache();

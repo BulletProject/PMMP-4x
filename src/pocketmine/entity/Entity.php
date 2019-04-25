@@ -186,68 +186,70 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	public const DATA_LEAD_HOLDER_EID = 37; //long
 	public const DATA_SCALE = 38; //float
 	public const DATA_HAS_NPC_COMPONENT = 39; //byte (???)
-	public const DATA_NPC_SKIN_ID = 40; //string
-	public const DATA_URL_TAG = 41; //string
-	public const DATA_MAX_AIR = 42; //short
-	public const DATA_MARK_VARIANT = 43; //int
-	public const DATA_CONTAINER_TYPE = 44; //byte (ContainerComponent)
-	public const DATA_CONTAINER_BASE_SIZE = 45; //int (ContainerComponent)
-	public const DATA_CONTAINER_EXTRA_SLOTS_PER_STRENGTH = 46; //int (used for llamas, inventory size is baseSize + thisProp * strength)
-	public const DATA_BLOCK_TARGET = 47; //block coords (ender crystal)
-	public const DATA_WITHER_INVULNERABLE_TICKS = 48; //int
-	public const DATA_WITHER_TARGET_1 = 49; //long
-	public const DATA_WITHER_TARGET_2 = 50; //long
-	public const DATA_WITHER_TARGET_3 = 51; //long
-	/* 52 (short) */
-	public const DATA_BOUNDING_BOX_WIDTH = 53; //float
-	public const DATA_BOUNDING_BOX_HEIGHT = 54; //float
-	public const DATA_FUSE_LENGTH = 55; //int
-	public const DATA_RIDER_SEAT_POSITION = 56; //vector3f
-	public const DATA_RIDER_ROTATION_LOCKED = 57; //byte
-	public const DATA_RIDER_MAX_ROTATION = 58; //float
-	public const DATA_RIDER_MIN_ROTATION = 59; //float
-	public const DATA_AREA_EFFECT_CLOUD_RADIUS = 60; //float
-	public const DATA_AREA_EFFECT_CLOUD_WAITING = 61; //int
-	public const DATA_AREA_EFFECT_CLOUD_PARTICLE_ID = 62; //int
-	/* 63 (int) shulker-related */
-	public const DATA_SHULKER_ATTACH_FACE = 64; //byte
-	/* 65 (short) shulker-related */
-	public const DATA_SHULKER_ATTACH_POS = 66; //block coords
-	public const DATA_TRADING_PLAYER_EID = 67; //long
+	public const DATA_SKIN_ID = 40; //string
+	public const DATA_NPC_SKIN_ID = 41; //string
+	public const DATA_URL_TAG = 42; //string
+	public const DATA_MAX_AIR = 43; //short
+	public const DATA_MARK_VARIANT = 44; //int
+	public const DATA_CONTAINER_TYPE = 45; //byte (ContainerComponent)
+	public const DATA_CONTAINER_BASE_SIZE = 46; //int (ContainerComponent)
+	public const DATA_CONTAINER_EXTRA_SLOTS_PER_STRENGTH = 47; //int (used for llamas, inventory size is baseSize + thisProp * strength)
+	public const DATA_BLOCK_TARGET = 48; //block coords (ender crystal)
+	public const DATA_WITHER_INVULNERABLE_TICKS = 49; //int
+	public const DATA_WITHER_TARGET_1 = 50; //long
+	public const DATA_WITHER_TARGET_2 = 51; //long
+	public const DATA_WITHER_TARGET_3 = 52; //long
+	/* 53 (short) */
+	public const DATA_BOUNDING_BOX_WIDTH = 54; //float
+	public const DATA_BOUNDING_BOX_HEIGHT = 55; //float
+	public const DATA_FUSE_LENGTH = 56; //int
+	public const DATA_RIDER_SEAT_POSITION = 57; //vector3f
+	public const DATA_RIDER_ROTATION_LOCKED = 58; //byte
+	public const DATA_RIDER_MAX_ROTATION = 59; //float
+	public const DATA_RIDER_MIN_ROTATION = 60; //float
+	public const DATA_AREA_EFFECT_CLOUD_RADIUS = 61; //float
+	public const DATA_AREA_EFFECT_CLOUD_WAITING = 62; //int
+	public const DATA_AREA_EFFECT_CLOUD_PARTICLE_ID = 63; //int
+	/* 64 (int) shulker-related */
+	public const DATA_SHULKER_ATTACH_FACE = 65; //byte
+	/* 66 (short) shulker-related */
+	public const DATA_SHULKER_ATTACH_POS = 67; //block coords
+	public const DATA_TRADING_PLAYER_EID = 68; //long
 
-	/* 69 (byte) command-block */
-	public const DATA_COMMAND_BLOCK_COMMAND = 70; //string
-	public const DATA_COMMAND_BLOCK_LAST_OUTPUT = 71; //string
-	public const DATA_COMMAND_BLOCK_TRACK_OUTPUT = 72; //byte
-	public const DATA_CONTROLLING_RIDER_SEAT_NUMBER = 73; //byte
-	public const DATA_STRENGTH = 74; //int
-	public const DATA_MAX_STRENGTH = 75; //int
-	/* 76 (int) */
-	public const DATA_LIMITED_LIFE = 77;
-	public const DATA_ARMOR_STAND_POSE_INDEX = 78; //int
-	public const DATA_ENDER_CRYSTAL_TIME_OFFSET = 79; //int
-	public const DATA_ALWAYS_SHOW_NAMETAG = 80; //byte: -1 = default, 0 = only when looked at, 1 = always
-	public const DATA_COLOR_2 = 81; //byte
-	/* 82 (unknown) */
-	public const DATA_SCORE_TAG = 83; //string
-	public const DATA_BALLOON_ATTACHED_ENTITY = 84; //int64, entity unique ID of owner
-	public const DATA_PUFFERFISH_SIZE = 85; //byte
-	public const DATA_BOAT_BUBBLE_TIME = 86; //int (time in bubble column)
-	public const DATA_PLAYER_AGENT_EID = 87; //long
-	/* 88 (float) related to panda sitting
-	 * 89 (float) related to panda sitting */
-	public const DATA_EAT_COUNTER = 90; //int (used by pandas)
-	public const DATA_FLAGS2 = 91; //long (extended data flags)
-	/* 92 (float) related to panda lying down
-	 * 93 (float) related to panda lying down */
-	public const DATA_AREA_EFFECT_CLOUD_DURATION = 94; //int
-	public const DATA_AREA_EFFECT_CLOUD_SPAWN_TIME = 95; //int
-	public const DATA_AREA_EFFECT_CLOUD_RADIUS_PER_TICK = 96; //float, usually negative
-	public const DATA_AREA_EFFECT_CLOUD_RADIUS_CHANGE_ON_PICKUP = 97; //float
-	public const DATA_AREA_EFFECT_CLOUD_PICKUP_COUNT = 98; //int
-	public const DATA_INTERACTIVE_TAG = 99; //string (button text)
-	public const DATA_TRADE_TIER = 100; //int
-	public const DATA_MAX_TRADE_TIER = 101; //int
+	/* 70 (byte) command-block */
+	public const DATA_COMMAND_BLOCK_COMMAND = 71; //string
+	public const DATA_COMMAND_BLOCK_LAST_OUTPUT = 72; //string
+	public const DATA_COMMAND_BLOCK_TRACK_OUTPUT = 73; //byte
+	public const DATA_CONTROLLING_RIDER_SEAT_NUMBER = 74; //byte
+	public const DATA_STRENGTH = 75; //int
+	public const DATA_MAX_STRENGTH = 76; //int
+	/* 77 (int) */
+	public const DATA_LIMITED_LIFE = 78;
+	public const DATA_ARMOR_STAND_POSE_INDEX = 79; //int
+	public const DATA_ENDER_CRYSTAL_TIME_OFFSET = 80; //int
+	public const DATA_ALWAYS_SHOW_NAMETAG = 81; //byte: -1 = default, 0 = only when looked at, 1 = always
+	public const DATA_COLOR_2 = 82; //byte
+	/* 83 (unknown) */
+	public const DATA_SCORE_TAG = 84; //string
+	public const DATA_BALLOON_ATTACHED_ENTITY = 85; //int64, entity unique ID of owner
+	public const DATA_PUFFERFISH_SIZE = 86; //byte
+	public const DATA_BOAT_BUBBLE_TIME = 87; //int (time in bubble column)
+	public const DATA_PLAYER_AGENT_EID = 88; //long
+	/* 89 (float) related to panda sitting
+	 * 90 (float) related to panda sitting */
+	public const DATA_EAT_COUNTER = 91; //int (used by pandas)
+	public const DATA_FLAGS2 = 92; //long (extended data flags)
+	/* 93 (float) related to panda lying down
+	 * 94 (float) related to panda lying down */
+	public const DATA_AREA_EFFECT_CLOUD_DURATION = 95; //int
+	public const DATA_AREA_EFFECT_CLOUD_SPAWN_TIME = 96; //int
+	public const DATA_AREA_EFFECT_CLOUD_RADIUS_PER_TICK = 97; //float, usually negative
+	public const DATA_AREA_EFFECT_CLOUD_RADIUS_CHANGE_ON_PICKUP = 98; //float
+	public const DATA_AREA_EFFECT_CLOUD_PICKUP_COUNT = 99; //int
+	public const DATA_INTERACTIVE_TAG = 100; //string (button text)
+	public const DATA_TRADE_TIER = 101; //int
+	public const DATA_MAX_TRADE_TIER = 102; //int
+	public const DATA_TRADE_XP = 103; //int
 
 	public const DATA_FLAG_ONFIRE = 0;
 	public const DATA_FLAG_SNEAKING = 1;
@@ -323,12 +325,20 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	public const DATA_FLAG_BLOCKING = 71; //shield
 	public const DATA_FLAG_DISABLE_BLOCKING = 72;
 	//73 is set when a player is attacked while using shield, unclear on purpose
-	public const DATA_FLAG_SLEEPING = 74;
-	//75 related to sleeping, unclear usage
-	public const DATA_FLAG_TRADE_INTEREST = 76;
-	public const DATA_FLAG_DOOR_BREAKER = 77; //...
-	public const DATA_FLAG_BREAKING_OBSTRUCTION = 78;
-	public const DATA_FLAG_DOOR_OPENER = 79; //...
+	//74 related to shield usage, needs further investigation
+	public const DATA_FLAG_SLEEPING = 75;
+	//76 related to sleeping, unclear usage
+	public const DATA_FLAG_TRADE_INTEREST = 77;
+	public const DATA_FLAG_DOOR_BREAKER = 78; //...
+	public const DATA_FLAG_BREAKING_OBSTRUCTION = 79;
+	public const DATA_FLAG_DOOR_OPENER = 80; //...
+	public const DATA_FLAG_ILLAGER_CAPTAIN = 81;
+	public const DATA_FLAG_STUNNED = 82;
+	public const DATA_FLAG_ROARING = 83;
+	public const DATA_FLAG_DELAYED_ATTACKING = 84;
+	public const DATA_FLAG_AVOIDING_MOBS = 85;
+	//86 used by RangedAttackGoal
+	//87 used by NearestAttackableTargetGoal
 
 	public const DATA_PLAYER_FLAG_SLEEP = 1;
 	public const DATA_PLAYER_FLAG_DEAD = 2; //TODO: CHECK
@@ -1561,7 +1571,7 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 				$d1 = $entity->z - $this->z;
 				$d2 = abs(max($d0, $d1));
 
-				if($d2 >= 0.009999999776482582){
+				if($d2 >= 0.009){
 					$d2 = sqrt($d2);
 					$d0 = $d0 / $d2;
 					$d1 = $d1 / $d2;
@@ -1571,10 +1581,10 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 
 					$d0 = $d0 * $d3;
 					$d1 = $d1 * $d3;
-					$d0 = $d0 * 0.05000000074505806;
-					$d1 = $d1 * 0.05000000074505806;
-					$d0 = $d0 * (1.0 - $this->entityCollisionReduction);
-					$d1 = $d1 * (1.0 - $this->entityCollisionReduction);
+					$d0 = $d0 * 0.05;
+					$d1 = $d1 * 0.05;
+					$d0 = $d0 * (1 - $this->entityCollisionReduction);
+					$d1 = $d1 * (1 - $this->entityCollisionReduction);
 
 					$this->motion = $this->motion->subtract($d0, 0, $d1);
 					$entity->motion = $entity->motion->add($d0, 0, $d1);
@@ -2044,7 +2054,7 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 
 	public function moveFlying(float $strafe, float $forward, float $friction) : bool{
 		$f = $strafe * $strafe + $forward * $forward;
-		if($f >= 1.0){
+		if($f >= 1){
 			$f = sqrt($f);
 
 			if($f < 1) $f = 1;
