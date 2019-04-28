@@ -26,7 +26,6 @@ namespace pocketmine\tile;
 use pocketmine\nbt\tag\CompoundTag;
 
 class Skull extends Spawnable{
-	public const TYPE_SKELETON = 0;
 	public const TYPE_WITHER = 1;
 	public const TYPE_ZOMBIE = 2;
 	public const TYPE_HUMAN = 3;

@@ -40,6 +40,10 @@ class UnknownBlock extends Transparent{
 		return 0;
 	}
 
+	public function canBePlaced() : bool{
+		return false;
+	}
+
 	public function getDrops(Item $item) : array{
 		return [];
 	}

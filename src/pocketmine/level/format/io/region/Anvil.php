@@ -23,7 +23,9 @@ declare(strict_types=1);
 
 namespace pocketmine\level\format\io\region;
 
+use pocketmine\level\format\Chunk;
 use pocketmine\level\format\io\ChunkUtils;
+use pocketmine\level\format\io\exception\CorruptedChunkException;
 use pocketmine\level\format\SubChunk;
 use pocketmine\nbt\tag\ByteArrayTag;
 use pocketmine\nbt\tag\CompoundTag;
@@ -38,6 +40,44 @@ class Anvil extends RegionLevelProvider{
 			new ByteArrayTag("SkyLight", ChunkUtils::reorderNibbleArray($subChunk->getBlockSkyLightArray(), "\xff")),
 			new ByteArrayTag("BlockLight", ChunkUtils::reorderNibbleArray($subChunk->getBlockLightArray()))
 		]);
+	}
+
+	protected function nbtDeserialize(string $data) : Chunk{
+		$nbt = new BigEndianNBTStream();
+		$chunk = $nbt->readCompressed($data);
+		if(!($chunk instanceof CompoundTag) or !$chunk->hasTag("Level")){
+			throw new CorruptedChunkException("'Level' key is missing from chunk NBT");
+		}
+
+		$chunk = $chunk->getCompoundTag("Level");
+
+		$subChunks = [];
+		$subChunksTag = $chunk->getListTag("Sections") ?? [];
+		foreach($subChunksTag as $subChunk){
+			if($subChunk instanceof CompoundTag){
+				$subChunks[$subChunk->getByte("Y")] = $this->deserializeSubChunk($subChunk);
+			}
+		}
+
+		if($chunk->hasTag("BiomeColors", IntArrayTag::class)){
+			$biomeIds = ChunkUtils::convertBiomeColors($chunk->getIntArray("BiomeColors")); //Convert back to original format
+		}else{
+			$biomeIds = $chunk->getByteArray("Biomes", "", true);
+		}
+
+		$result = new Chunk(
+			$chunk->getInt("xPos"),
+			$chunk->getInt("zPos"),
+			$subChunks,
+			$chunk->hasTag("Entities", ListTag::class) ? $chunk->getListTag("Entities")->getValue() : [],
+			$chunk->hasTag("TileEntities", ListTag::class) ? $chunk->getListTag("TileEntities")->getValue() : [],
+			$biomeIds,
+			$chunk->getIntArray("HeightMap", [])
+		);
+		$result->setLightPopulated($chunk->getByte("LightPopulated", 0) !== 0);
+		$result->setPopulated($chunk->getByte("TerrainPopulated", 0) !== 0);
+		$result->setGenerated();
+		return $result;
 	}
 
 	protected function deserializeSubChunk(CompoundTag $subChunk) : SubChunk{

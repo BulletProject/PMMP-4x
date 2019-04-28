@@ -29,6 +29,8 @@ use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
 use pocketmine\Player;
+use function max;
+use function min;
 
 class Vine extends Flowable{
 	private const FLAG_SOUTH = 0x01;

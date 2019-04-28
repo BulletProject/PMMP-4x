@@ -23,7 +23,10 @@ declare(strict_types=1);
 
 namespace pocketmine\network\mcpe;
 
-use pocketmine\network\AdvancedNetworkInterface;
+use pocketmine\event\player\PlayerCreationEvent;
+use pocketmine\network\AdvancedSourceInterface;
+use pocketmine\network\mcpe\protocol\BatchPacket;
+use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\Network;
 use pocketmine\Server;
@@ -35,6 +38,14 @@ use raklib\server\RakLibServer;
 use raklib\server\ServerHandler;
 use raklib\server\ServerInstance;
 use raklib\utils\InternetAddress;
+use function addcslashes;
+use function bin2hex;
+use function get_class;
+use function implode;
+use function rtrim;
+use function spl_object_hash;
+use function unserialize;
+use const PTHREADS_INHERIT_CONSTANTS;
 
 class RakLibInterface implements ServerInstance, AdvancedNetworkInterface{
 	/**
@@ -84,8 +95,7 @@ class RakLibInterface implements ServerInstance, AdvancedNetworkInterface{
 
 	public function start() : void{
 		$this->server->getTickSleeper()->addNotifier($this->sleeper, function() : void{
-			//this should not throw any exception. If it does, this should crash the server since it's a fault condition.
-			while($this->interface->handlePacket());
+			$this->process();
 		});
 		$this->rakLib->start(PTHREADS_INHERIT_CONSTANTS); //HACK: MainLogger needs constants for exception logging
 	}
@@ -139,8 +149,9 @@ class RakLibInterface implements ServerInstance, AdvancedNetworkInterface{
 			$session = $this->sessions[$identifier];
 			$address = $session->getIp();
 			try{
-				if($packet->buffer !== "" and $packet->buffer{0} === self::MCPE_RAKNET_PACKET_ID){ //Batch
-					$session->handleEncoded(substr($packet->buffer, 1));
+				if($packet->buffer !== ""){
+					$pk = new BatchPacket($packet->buffer);
+					$player->handleDataPacket($pk);
 				}
 			}catch(\Throwable $e){
 				$logger = $this->server->getLogger();

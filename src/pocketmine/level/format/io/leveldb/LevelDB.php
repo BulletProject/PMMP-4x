@@ -32,10 +32,31 @@ use pocketmine\level\format\io\exception\UnsupportedLevelFormatException;
 use pocketmine\level\format\io\LevelData;
 use pocketmine\level\format\SubChunk;
 use pocketmine\nbt\LittleEndianNBTStream;
-use pocketmine\nbt\tag\CompoundTag;
-use pocketmine\nbt\tag\IntTag;
+use pocketmine\nbt\tag\{ByteTag, CompoundTag, FloatTag, IntTag, LongTag, StringTag};
+use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\utils\Binary;
 use pocketmine\utils\BinaryStream;
+use function array_values;
+use function chr;
+use function defined;
+use function explode;
+use function extension_loaded;
+use function file_exists;
+use function file_get_contents;
+use function file_put_contents;
+use function is_array;
+use function is_dir;
+use function mkdir;
+use function ord;
+use function pack;
+use function rtrim;
+use function strlen;
+use function substr;
+use function time;
+use function trim;
+use function unpack;
+use const INT32_MAX;
+use const LEVELDB_ZLIB_RAW_COMPRESSION;
 
 class LevelDB extends BaseLevelProvider{
 
@@ -130,10 +151,16 @@ class LevelDB extends BaseLevelProvider{
 		/** @var SubChunk[] $subChunks */
 		$subChunks = [];
 
+		/** @var int[] $heightMap */
+		$heightMap = [];
+		/** @var string $biomeIds */
+		$biomeIds = "";
+
 		/** @var bool $lightPopulated */
 		$lightPopulated = true;
 
 		$chunkVersion = ord($this->db->get($index . self::TAG_VERSION));
+		$hasBeenUpgraded = $chunkVersion < self::CURRENT_LEVEL_CHUNK_VERSION;
 
 		$binaryStream = new BinaryStream();
 
@@ -149,6 +176,9 @@ class LevelDB extends BaseLevelProvider{
 
 					$binaryStream->setBuffer($data, 0);
 					$subChunkVersion = $binaryStream->getByte();
+					if($subChunkVersion < self::CURRENT_LEVEL_SUBCHUNK_VERSION){
+						$hasBeenUpgraded = true;
+					}
 
 					switch($subChunkVersion){
 						case 0:
@@ -157,6 +187,7 @@ class LevelDB extends BaseLevelProvider{
 							if($chunkVersion < 4){
 								$blockSkyLight = $binaryStream->get(2048);
 								$blockLight = $binaryStream->get(2048);
+								$hasBeenUpgraded = true; //drop saved light
 							}else{
 								//Mojang didn't bother changing the subchunk version when they stopped saving sky light -_-
 								$blockSkyLight = "";
@@ -172,10 +203,12 @@ class LevelDB extends BaseLevelProvider{
 					}
 				}
 
-				$binaryStream->setBuffer($this->db->get($index . self::TAG_DATA_2D), 0);
+				if(($maps2d = $this->db->get($index . self::TAG_DATA_2D)) !== false){
+					$binaryStream->setBuffer($maps2d, 0);
 
-				$heightMap = array_values(unpack("v*", $binaryStream->get(512)));
-				$biomeIds = $binaryStream->get(256);
+					$heightMap = array_values(unpack("v*", $binaryStream->get(512)));
+					$biomeIds = $binaryStream->get(256);
+				}
 				break;
 			case 2: // < MCPE 1.0
 				$binaryStream->setBuffer($this->db->get($index . self::TAG_LEGACY_TERRAIN));
@@ -269,6 +302,7 @@ class LevelDB extends BaseLevelProvider{
 		$chunk->setGenerated(true);
 		$chunk->setPopulated(true);
 		$chunk->setLightPopulated($lightPopulated);
+		$chunk->setChanged($hasBeenUpgraded); //trigger rewriting chunk to disk if it was converted from an older format
 
 		return $chunk;
 	}

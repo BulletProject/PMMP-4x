@@ -30,6 +30,18 @@ use pocketmine\math\Facing;
 class CobblestoneWall extends Transparent{
 	public const NONE_MOSSY_WALL = 0;
 	public const MOSSY_WALL = 1;
+	public const GRANITE_WALL = 2;
+	public const DIORITE_WALL = 3;
+	public const ANDESITE_WALL = 4;
+	public const SANDSTONE_WALL = 5;
+	public const BRICK_WALL = 6;
+	public const STONE_BRICK_WALL = 7;
+	public const MOSSY_STONE_BRICK_WALL = 8;
+	public const NETHER_BRICK_WALL = 9;
+	public const END_STONE_BRICK_WALL = 10;
+	public const PRISMARINE_WALL = 11;
+	public const RED_SANDSTONE_WALL = 12;
+	public const RED_NETHER_BRICK_WALL = 13;
 
 	/** @var bool[] facing => dummy */
 	protected $connections = [];
@@ -48,19 +60,24 @@ class CobblestoneWall extends Transparent{
 		return 2;
 	}
 
-	public function readStateFromWorld() : void{
-		parent::readStateFromWorld();
-
-		foreach(Facing::HORIZONTAL as $facing){
-			$block = $this->getSide($facing);
-			if($block instanceof static or $block instanceof FenceGate or ($block->isSolid() and !$block->isTransparent())){
-				$this->connections[$facing] = true;
-			}else{
-				unset($this->connections[$facing]);
-			}
-		}
-
-		$this->up = $this->getSide(Facing::UP)->getId() !== Block::AIR;
+	public function getName() : string{
+		static $names = [
+			self::NONE_MOSSY_WALL => "Cobblestone",
+			self::MOSSY_WALL => "Mossy Cobblestone",
+			self::GRANITE_WALL => "Granite",
+			self::DIORITE_WALL => "Diorite",
+			self::ANDESITE_WALL => "Andesite",
+			self::SANDSTONE_WALL => "Sandstone",
+			self::BRICK_WALL => "Brick",
+			self::STONE_BRICK_WALL => "Stone Brick",
+			self::MOSSY_STONE_BRICK_WALL => "Mossy Stone Brick",
+			self::NETHER_BRICK_WALL => "Nether Brick",
+			self::END_STONE_BRICK_WALL => "End Stone Brick",
+			self::PRISMARINE_WALL => "Prismarine",
+			self::RED_SANDSTONE_WALL => "Red Sandstone",
+			self::RED_NETHER_BRICK_WALL => "Red Nether Brick"
+		];
+		return ($names[$this->getVariant()] ?? "Unknown") . " Wall";
 	}
 
 	protected function recalculateBoundingBox() : ?AxisAlignedBB{

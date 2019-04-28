@@ -75,7 +75,23 @@ use pocketmine\plugin\Plugin;
 use pocketmine\Server;
 use pocketmine\timings\Timings;
 use pocketmine\timings\TimingsHandler;
-use pocketmine\utils\Utils;
+use function abs;
+use function assert;
+use function cos;
+use function count;
+use function current;
+use function deg2rad;
+use function floor;
+use function get_class;
+use function in_array;
+use function is_a;
+use function is_array;
+use function is_infinite;
+use function is_nan;
+use function lcg_value;
+use function reset;
+use function sin;
+use const M_PI_2;
 
 abstract class Entity extends Location implements Metadatable, EntityIds{
 
@@ -93,6 +109,10 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	public const DATA_TYPE_LONG = 7;
 	public const DATA_TYPE_VECTOR3F = 8;
 
+	/*
+	 * Readers beware: this isn't a nice list. Some of the properties have different types for different entities, and
+	 * are used for entirely different things.
+	 */
 	public const DATA_FLAGS = 0;
 	public const DATA_HEALTH = 1; //int (minecart/boat)
 	public const DATA_VARIANT = 2; //int
@@ -110,17 +130,21 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	public const DATA_PADDLE_TIME_RIGHT = 14; //float
 	public const DATA_EXPERIENCE_VALUE = 15; //int (xp orb)
 	public const DATA_MINECART_DISPLAY_BLOCK = 16; //int (id | (data << 16))
+	public const DATA_HORSE_FLAGS = 16; //int
+	/* 16 (byte) used by wither skull */
 	public const DATA_MINECART_DISPLAY_OFFSET = 17; //int
+	public const DATA_SHOOTER_ID = 17; //long (used by arrows)
 	public const DATA_MINECART_HAS_DISPLAY = 18; //byte (must be 1 for minecart to show block inside)
-
-	//TODO: add more properties
-
+	public const DATA_HORSE_TYPE = 19; //byte
+	/* 20 (unknown)
+	 * 21 (unknown) */
+	public const DATA_CHARGE_AMOUNT = 22; //int8, used for ghasts and also crossbow charging
 	public const DATA_ENDERMAN_HELD_ITEM_ID = 23; //short
 	public const DATA_ENTITY_AGE = 24; //short
-
-	/* 26 (byte) player-specific flags
-	 * 27 (int) player "index"?
-	 * 28 (block coords) bed position */
+	/* 25 (int) used by horse, (byte) used by witch */
+	public const DATA_PLAYER_FLAGS = 26; //byte
+	public const DATA_PLAYER_INDEX = 27; //int, used for marker colours and agent nametag colours
+	public const DATA_PLAYER_BED_POSITION = 28; //blockpos
 	public const DATA_FIREBALL_POWER_X = 29; //float
 	public const DATA_FIREBALL_POWER_Y = 30;
 	public const DATA_FIREBALL_POWER_Z = 31;
@@ -131,54 +155,71 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	public const DATA_POTION_AUX_VALUE = 36; //short
 	public const DATA_LEAD_HOLDER_EID = 37; //long
 	public const DATA_SCALE = 38; //float
-	public const DATA_INTERACTIVE_TAG = 39; //string (button text)
-	public const DATA_NPC_SKIN_ID = 40; //string
-	public const DATA_URL_TAG = 41; //string
-	public const DATA_MAX_AIR = 42; //short
-	public const DATA_MARK_VARIANT = 43; //int
-	public const DATA_CONTAINER_TYPE = 44; //byte (ContainerComponent)
-	public const DATA_CONTAINER_BASE_SIZE = 45; //int (ContainerComponent)
-	public const DATA_CONTAINER_EXTRA_SLOTS_PER_STRENGTH = 46; //int (used for llamas, inventory size is baseSize + thisProp * strength)
-	public const DATA_BLOCK_TARGET = 47; //block coords (ender crystal)
-	public const DATA_WITHER_INVULNERABLE_TICKS = 48; //int
-	public const DATA_WITHER_TARGET_1 = 49; //long
-	public const DATA_WITHER_TARGET_2 = 50; //long
-	public const DATA_WITHER_TARGET_3 = 51; //long
-	/* 52 (short) */
-	public const DATA_BOUNDING_BOX_WIDTH = 53; //float
-	public const DATA_BOUNDING_BOX_HEIGHT = 54; //float
-	public const DATA_FUSE_LENGTH = 55; //int
-	public const DATA_RIDER_SEAT_POSITION = 56; //vector3f
-	public const DATA_RIDER_ROTATION_LOCKED = 57; //byte
-	public const DATA_RIDER_MAX_ROTATION = 58; //float
-	public const DATA_RIDER_MIN_ROTATION = 59; //float
-	public const DATA_AREA_EFFECT_CLOUD_RADIUS = 60; //float
-	public const DATA_AREA_EFFECT_CLOUD_WAITING = 61; //int
-	public const DATA_AREA_EFFECT_CLOUD_PARTICLE_ID = 62; //int
-	/* 63 (int) shulker-related */
-	public const DATA_SHULKER_ATTACH_FACE = 64; //byte
-	/* 65 (short) shulker-related */
-	public const DATA_SHULKER_ATTACH_POS = 66; //block coords
-	public const DATA_TRADING_PLAYER_EID = 67; //long
+	public const DATA_HAS_NPC_COMPONENT = 39; //byte (???)
+	public const DATA_SKIN_ID = 40; //string
+	public const DATA_NPC_SKIN_ID = 41; //string
+	public const DATA_URL_TAG = 42; //string
+	public const DATA_MAX_AIR = 43; //short
+	public const DATA_MARK_VARIANT = 44; //int
+	public const DATA_CONTAINER_TYPE = 45; //byte (ContainerComponent)
+	public const DATA_CONTAINER_BASE_SIZE = 46; //int (ContainerComponent)
+	public const DATA_CONTAINER_EXTRA_SLOTS_PER_STRENGTH = 47; //int (used for llamas, inventory size is baseSize + thisProp * strength)
+	public const DATA_BLOCK_TARGET = 48; //block coords (ender crystal)
+	public const DATA_WITHER_INVULNERABLE_TICKS = 49; //int
+	public const DATA_WITHER_TARGET_1 = 50; //long
+	public const DATA_WITHER_TARGET_2 = 51; //long
+	public const DATA_WITHER_TARGET_3 = 52; //long
+	/* 53 (short) */
+	public const DATA_BOUNDING_BOX_WIDTH = 54; //float
+	public const DATA_BOUNDING_BOX_HEIGHT = 55; //float
+	public const DATA_FUSE_LENGTH = 56; //int
+	public const DATA_RIDER_SEAT_POSITION = 57; //vector3f
+	public const DATA_RIDER_ROTATION_LOCKED = 58; //byte
+	public const DATA_RIDER_MAX_ROTATION = 59; //float
+	public const DATA_RIDER_MIN_ROTATION = 60; //float
+	public const DATA_AREA_EFFECT_CLOUD_RADIUS = 61; //float
+	public const DATA_AREA_EFFECT_CLOUD_WAITING = 62; //int
+	public const DATA_AREA_EFFECT_CLOUD_PARTICLE_ID = 63; //int
+	/* 64 (int) shulker-related */
+	public const DATA_SHULKER_ATTACH_FACE = 65; //byte
+	/* 66 (short) shulker-related */
+	public const DATA_SHULKER_ATTACH_POS = 67; //block coords
+	public const DATA_TRADING_PLAYER_EID = 68; //long
 
-	/* 69 (byte) command-block */
-	public const DATA_COMMAND_BLOCK_COMMAND = 70; //string
-	public const DATA_COMMAND_BLOCK_LAST_OUTPUT = 71; //string
-	public const DATA_COMMAND_BLOCK_TRACK_OUTPUT = 72; //byte
-	public const DATA_CONTROLLING_RIDER_SEAT_NUMBER = 73; //byte
-	public const DATA_STRENGTH = 74; //int
-	public const DATA_MAX_STRENGTH = 75; //int
-	/* 76 (int) */
-	public const DATA_LIMITED_LIFE = 77;
-	public const DATA_ARMOR_STAND_POSE_INDEX = 78; //int
-	public const DATA_ENDER_CRYSTAL_TIME_OFFSET = 79; //int
-	public const DATA_ALWAYS_SHOW_NAMETAG = 80; //byte: -1 = default, 0 = only when looked at, 1 = always
-	public const DATA_COLOR_2 = 81; //byte
-	/* 82 (unknown) */
-	public const DATA_SCORE_TAG = 83; //string
-	public const DATA_BALLOON_ATTACHED_ENTITY = 84; //int64, entity unique ID of owner
-	public const DATA_PUFFERFISH_SIZE = 85; //byte
-
+	/* 70 (byte) command-block */
+	public const DATA_COMMAND_BLOCK_COMMAND = 71; //string
+	public const DATA_COMMAND_BLOCK_LAST_OUTPUT = 72; //string
+	public const DATA_COMMAND_BLOCK_TRACK_OUTPUT = 73; //byte
+	public const DATA_CONTROLLING_RIDER_SEAT_NUMBER = 74; //byte
+	public const DATA_STRENGTH = 75; //int
+	public const DATA_MAX_STRENGTH = 76; //int
+	/* 77 (int) */
+	public const DATA_LIMITED_LIFE = 78;
+	public const DATA_ARMOR_STAND_POSE_INDEX = 79; //int
+	public const DATA_ENDER_CRYSTAL_TIME_OFFSET = 80; //int
+	public const DATA_ALWAYS_SHOW_NAMETAG = 81; //byte: -1 = default, 0 = only when looked at, 1 = always
+	public const DATA_COLOR_2 = 82; //byte
+	/* 83 (unknown) */
+	public const DATA_SCORE_TAG = 84; //string
+	public const DATA_BALLOON_ATTACHED_ENTITY = 85; //int64, entity unique ID of owner
+	public const DATA_PUFFERFISH_SIZE = 86; //byte
+	public const DATA_BOAT_BUBBLE_TIME = 87; //int (time in bubble column)
+	public const DATA_PLAYER_AGENT_EID = 88; //long
+	/* 89 (float) related to panda sitting
+	 * 90 (float) related to panda sitting */
+	public const DATA_EAT_COUNTER = 91; //int (used by pandas)
+	public const DATA_FLAGS2 = 92; //long (extended data flags)
+	/* 93 (float) related to panda lying down
+	 * 94 (float) related to panda lying down */
+	public const DATA_AREA_EFFECT_CLOUD_DURATION = 95; //int
+	public const DATA_AREA_EFFECT_CLOUD_SPAWN_TIME = 96; //int
+	public const DATA_AREA_EFFECT_CLOUD_RADIUS_PER_TICK = 97; //float, usually negative
+	public const DATA_AREA_EFFECT_CLOUD_RADIUS_CHANGE_ON_PICKUP = 98; //float
+	public const DATA_AREA_EFFECT_CLOUD_PICKUP_COUNT = 99; //int
+	public const DATA_INTERACTIVE_TAG = 100; //string (button text)
+	public const DATA_TRADE_TIER = 101; //int
+	public const DATA_MAX_TRADE_TIER = 102; //int
+	public const DATA_TRADE_XP = 103; //int
 
 	public const DATA_FLAG_ONFIRE = 0;
 	public const DATA_FLAG_SNEAKING = 1;
@@ -234,13 +275,43 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	public const DATA_FLAG_ENCHANTED = 51;
 	public const DATA_FLAG_SHOW_TRIDENT_ROPE = 52; // tridents show an animated rope when enchanted with loyalty after they are thrown and return to their owner. To be combined with DATA_OWNER_EID
 	public const DATA_FLAG_CONTAINER_PRIVATE = 53; //inventory is private, doesn't drop contents when killed if true
-	//54 TransformationComponent
+	public const DATA_FLAG_TRANSFORMING = 54;
 	public const DATA_FLAG_SPIN_ATTACK = 55;
 	public const DATA_FLAG_SWIMMING = 56;
 	public const DATA_FLAG_BRIBED = 57; //dolphins have this set when they go to find treasure for the player
 	public const DATA_FLAG_PREGNANT = 58;
 	public const DATA_FLAG_LAYING_EGG = 59;
-	//60 ??
+	public const DATA_FLAG_RIDER_CAN_PICK = 60; //???
+	public const DATA_FLAG_TRANSITION_SITTING = 61;
+	public const DATA_FLAG_EATING = 62;
+	public const DATA_FLAG_LAYING_DOWN = 63;
+	public const DATA_FLAG_SNEEZING = 64;
+	public const DATA_FLAG_TRUSTING = 65;
+	public const DATA_FLAG_ROLLING = 66;
+	public const DATA_FLAG_SCARED = 67;
+	public const DATA_FLAG_IN_SCAFFOLDING = 68;
+	public const DATA_FLAG_OVER_SCAFFOLDING = 69;
+	public const DATA_FLAG_FALL_THROUGH_SCAFFOLDING = 70;
+	public const DATA_FLAG_BLOCKING = 71; //shield
+	public const DATA_FLAG_DISABLE_BLOCKING = 72;
+	//73 is set when a player is attacked while using shield, unclear on purpose
+	//74 related to shield usage, needs further investigation
+	public const DATA_FLAG_SLEEPING = 75;
+	//76 related to sleeping, unclear usage
+	public const DATA_FLAG_TRADE_INTEREST = 77;
+	public const DATA_FLAG_DOOR_BREAKER = 78; //...
+	public const DATA_FLAG_BREAKING_OBSTRUCTION = 79;
+	public const DATA_FLAG_DOOR_OPENER = 80; //...
+	public const DATA_FLAG_ILLAGER_CAPTAIN = 81;
+	public const DATA_FLAG_STUNNED = 82;
+	public const DATA_FLAG_ROARING = 83;
+	public const DATA_FLAG_DELAYED_ATTACKING = 84;
+	public const DATA_FLAG_AVOIDING_MOBS = 85;
+	//86 used by RangedAttackGoal
+	//87 used by NearestAttackableTargetGoal
+
+	public const DATA_PLAYER_FLAG_SLEEP = 1;
+	public const DATA_PLAYER_FLAG_DEAD = 2; //TODO: CHECK
 
 	public static $entityCount = 1;
 	/** @var Entity[] */
@@ -437,7 +508,9 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	/** @var int */
 	public $lastUpdate;
 	/** @var int */
-	public $fireTicks = 0;
+	protected $fireTicks = 0;
+	/** @var CompoundTag */
+	public $namedtag;
 	/** @var bool */
 	public $canCollide = true;
 
@@ -1048,8 +1121,8 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 
 	public function setOnFire(int $seconds) : void{
 		$ticks = $seconds * 20;
-		if($ticks > $this->fireTicks){
-			$this->fireTicks = $ticks;
+		if($ticks > $this->getFireTicks()){
+			$this->setFireTicks($ticks);
 		}
 
 		$this->setGenericFlag(self::DATA_FLAG_ONFIRE, true);
@@ -1064,8 +1137,12 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 
 	/**
 	 * @param int $fireTicks
+	 * @throws \InvalidArgumentException
 	 */
 	public function setFireTicks(int $fireTicks) : void{
+		if($fireTicks < 0 or $fireTicks > 0x7fff){
+			throw new \InvalidArgumentException("Fire ticks must be in range 0 ... " . 0x7fff . ", got $fireTicks");
+		}
 		$this->fireTicks = $fireTicks;
 	}
 
@@ -1115,8 +1192,11 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	}
 
 	protected function updateMovement(bool $teleport = false) : void{
-		$diffPosition = $this->distanceSquared($this->lastLocation);
-		$diffRotation = ($this->yaw - $this->lastLocation->yaw) ** 2 + ($this->pitch - $this->lastLocation->pitch) ** 2;
+		//TODO: hack for client-side AI interference: prevent client sided movement when motion is 0
+		$this->setImmobile($this->motion->x == 0 and $this->motion->y == 0 and $this->motion->z == 0);
+
+		$diffPosition = ($this->x - $this->lastX) ** 2 + ($this->y - $this->lastY) ** 2 + ($this->z - $this->lastZ) ** 2;
+		$diffRotation = ($this->yaw - $this->lastYaw) ** 2 + ($this->pitch - $this->lastPitch) ** 2;
 
 		$diffMotion = $this->motion->subtract($this->lastMotion)->lengthSquared();
 
@@ -1524,7 +1604,8 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 
 			assert(abs($dx) <= 20 and abs($dy) <= 20 and abs($dz) <= 20, "Movement distance is excessive: dx=$dx, dy=$dy, dz=$dz");
 
-			$list = $this->level->getCollisionCubes($this, $this->level->getTickRate() > 1 ? $this->boundingBox->offsetCopy($dx, $dy, $dz) : $this->boundingBox->addCoord($dx, $dy, $dz), false);
+			//TODO: bad hack here will cause unexpected behaviour under heavy lag
+			$list = $this->level->getCollisionCubes($this, $this->level->getTickRateTime() > 50 ? $this->boundingBox->offsetCopy($dx, $dy, $dz) : $this->boundingBox->addCoord($dx, $dy, $dz), false);
 
 			foreach($list as $bb){
 				$dy = $bb->calculateYOffset($this->boundingBox, $dy);
@@ -1874,6 +1955,7 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 		$pk->position = $this->asVector3();
 		$pk->motion = $this->getMotion();
 		$pk->yaw = $this->yaw;
+		$pk->headYaw = $this->yaw; //TODO
 		$pk->pitch = $this->pitch;
 		$pk->attributes = $this->attributeMap->getAll();
 		$pk->metadata = $this->propertyManager->getAll();
@@ -2010,7 +2092,7 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	 * @return bool
 	 */
 	public function getGenericFlag(int $flagId) : bool{
-		return $this->getDataFlag(self::DATA_FLAGS, $flagId);
+		return $this->getDataFlag($flagId >= 64 ? self::DATA_FLAGS2 : self::DATA_FLAGS, $flagId % 64);
 	}
 
 	/**
@@ -2020,7 +2102,7 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	 * @param bool $value
 	 */
 	public function setGenericFlag(int $flagId, bool $value = true) : void{
-		$this->setDataFlag(self::DATA_FLAGS, $flagId, $value, self::DATA_TYPE_LONG);
+		$this->setDataFlag($flagId >= 64 ? self::DATA_FLAGS2 : self::DATA_FLAGS, $flagId % 64, $value, self::DATA_TYPE_LONG);
 	}
 
 	/**
@@ -2086,5 +2168,48 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 
 	public function __toString(){
 		return (new \ReflectionClass($this))->getShortName() . "(" . $this->getId() . ")";
+	}
+
+	/**
+	 * TODO: remove this BC hack in 4.0
+	 *
+	 * @param string $name
+	 *
+	 * @return mixed
+	 * @throws \ErrorException
+	 */
+	public function __get($name){
+		if($name === "fireTicks"){
+			return $this->fireTicks;
+		}
+		throw new \ErrorException("Undefined property: " . get_class($this) . "::\$" . $name);
+	}
+
+	/**
+	 * TODO: remove this BC hack in 4.0
+	 *
+	 * @param string $name
+	 * @param mixed $value
+	 *
+	 * @throws \ErrorException
+	 * @throws \InvalidArgumentException
+	 */
+	public function __set($name, $value){
+		if($name === "fireTicks"){
+			$this->setFireTicks($value);
+		}else{
+			throw new \ErrorException("Undefined property: " . get_class($this) . "::\$" . $name);
+		}
+	}
+
+	/**
+	 * TODO: remove this BC hack in 4.0
+	 *
+	 * @param string $name
+	 *
+	 * @return bool
+	 */
+	public function __isset($name){
+		return $name === "fireTicks";
 	}
 }

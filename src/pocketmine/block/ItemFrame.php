@@ -29,6 +29,7 @@ use pocketmine\math\Vector3;
 use pocketmine\Player;
 use pocketmine\tile\ItemFrame as TileItemFrame;
 use pocketmine\tile\Tile;
+use function lcg_value;
 
 class ItemFrame extends Flowable{
 	protected $id = Block::ITEM_FRAME_BLOCK;
@@ -72,7 +73,13 @@ class ItemFrame extends Flowable{
 	}
 
 	public function onNearbyBlockChange() : void{
-		if(!$this->getSide(Facing::opposite($this->facing))->isSolid()){
+		$sides = [
+			0 => Vector3::SIDE_WEST,
+			1 => Vector3::SIDE_EAST,
+			2 => Vector3::SIDE_NORTH,
+			3 => Vector3::SIDE_SOUTH
+		];
+		if(isset($sides[$this->meta]) and !$this->getSide($sides[$this->meta])->isSolid()){
 			$this->level->useBreakOn($this);
 		}
 	}
@@ -111,5 +118,9 @@ class ItemFrame extends Flowable{
 
 	public function isAffectedBySilkTouch() : bool{
 		return false;
+	}
+
+	public function getHardness() : float{
+		return 0.25;
 	}
 }

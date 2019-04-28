@@ -28,6 +28,7 @@ use pocketmine\item\ItemFactory;
 use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
 use pocketmine\Player;
+use function mt_rand;
 
 class TallGrass extends Flowable{
 
@@ -36,9 +37,17 @@ class TallGrass extends Flowable{
 	}
 
 	public function place(Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, Player $player = null) : bool{
+<<<<<<< HEAD
 		$down = $this->getSide(Facing::DOWN);
 		if($down->getId() === self::GRASS){
 			return parent::place($item, $blockReplace, $blockClicked, $face, $clickVector, $player);
+=======
+		$down = $this->getSide(Vector3::SIDE_DOWN)->getId();
+		if($down === self::GRASS or $down === self::DIRT){
+			$this->getLevel()->setBlock($blockReplace, $this, true);
+
+			return true;
+>>>>>>> pmmp/stable
 		}
 
 		return false;

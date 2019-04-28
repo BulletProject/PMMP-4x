@@ -27,6 +27,7 @@ use pocketmine\item\Item;
 use pocketmine\math\Facing;
 use pocketmine\math\Vector3;
 use pocketmine\Player;
+use function mt_rand;
 
 class DoublePlant extends Flowable{
 	private const BITFLAG_TOP = 0x08;

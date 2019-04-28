@@ -23,6 +23,9 @@ declare(strict_types=1);
 
 namespace pocketmine;
 
+use pocketmine\utils\MainLogger;
+use function spl_object_hash;
+
 class ThreadManager extends \Volatile{
 
 	/** @var ThreadManager */

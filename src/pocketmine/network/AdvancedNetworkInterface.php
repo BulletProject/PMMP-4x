@@ -30,7 +30,7 @@ namespace pocketmine\network;
  * Advanced network interfaces have some additional capabilities, such as being able to ban addresses and process raw
  * packets.
  */
-interface AdvancedNetworkInterface extends NetworkInterface{
+interface AdvancedSourceInterface extends SourceInterface{
 
 	/**
 	 * Prevents packets received from the IP address getting processed for the given timeout.

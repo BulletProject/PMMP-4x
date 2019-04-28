@@ -26,6 +26,9 @@ namespace pocketmine\network\mcpe;
 use pocketmine\level\format\Chunk;
 use pocketmine\network\mcpe\protocol\FullChunkDataPacket;
 use pocketmine\scheduler\AsyncTask;
+use pocketmine\Server;
+use function assert;
+use function strlen;
 
 class ChunkRequestTask extends AsyncTask{
 	/** @var string */
@@ -59,9 +62,19 @@ class ChunkRequestTask extends AsyncTask{
 		$this->setResult(NetworkCompression::compress($stream->buffer, $this->compressionLevel));
 	}
 
-	public function onCompletion() : void{
-		/** @var CompressBatchPromise $promise */
-		$promise = $this->fetchLocal();
-		$promise->resolve($this->getResult());
+	public function onCompletion(Server $server){
+		$level = $server->getLevel($this->levelId);
+		if($level instanceof Level){
+			if($this->hasResult()){
+				$batch = new BatchPacket($this->getResult());
+				assert(strlen($batch->buffer) > 0);
+				$batch->isEncoded = true;
+				$level->chunkRequestCallback($this->chunkX, $this->chunkZ, $batch);
+			}else{
+				$server->getLogger()->error("Chunk request for world #" . $this->levelId . ", x=" . $this->chunkX . ", z=" . $this->chunkZ . " doesn't have any result data");
+			}
+		}else{
+			$server->getLogger()->debug("Dropped chunk task due to world not loaded");
+		}
 	}
 }

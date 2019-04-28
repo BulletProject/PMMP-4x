@@ -36,6 +36,8 @@ use pocketmine\network\mcpe\protocol\EntityEventPacket;
 use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 use pocketmine\network\mcpe\protocol\TakeItemEntityPacket;
 use pocketmine\Player;
+use function mt_rand;
+use function sqrt;
 
 class Arrow extends Projectile{
 	public const NETWORK_ID = self::ARROW;
@@ -121,7 +123,7 @@ class Arrow extends Projectile{
 
 		$hasUpdate = parent::entityBaseTick($tickDiff);
 
-		if($this->isCollided){
+		if($this->blockHit !== null){
 			$this->collideTicks += $tickDiff;
 			if($this->collideTicks > 1200){
 				$this->flagForDespawn();

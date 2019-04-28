@@ -27,7 +27,8 @@ namespace pocketmine\network\mcpe\protocol;
 
 
 use pocketmine\math\Vector3;
-use pocketmine\network\mcpe\handler\SessionHandler;
+use pocketmine\network\mcpe\NetworkSession;
+use function count;
 
 class ExplodePacket extends DataPacket{
 	public const NETWORK_ID = ProtocolInfo::EXPLODE_PACKET;

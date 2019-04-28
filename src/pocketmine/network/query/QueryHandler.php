@@ -30,9 +30,28 @@ namespace pocketmine\network\query;
 use pocketmine\network\AdvancedNetworkInterface;
 use pocketmine\Server;
 use pocketmine\utils\Binary;
+use function bin2hex;
+use function chr;
+use function hash;
+use function microtime;
+use function ord;
+use function random_bytes;
+use function strlen;
+use function substr;
 
 class QueryHandler{
-	private $server, $lastToken, $token, $longData, $shortData, $timeout;
+	/** @var Server */
+	private $server;
+	/** @var string */
+	private $lastToken;
+	/** @var string */
+	private $token;
+	/** @var string */
+	private $longData;
+	/** @var string */
+	private $shortData;
+	/** @var float */
+	private $timeout;
 
 	public const HANDSHAKE = 9;
 	public const STATISTICS = 0;

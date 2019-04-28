@@ -43,6 +43,15 @@ use pocketmine\nbt\tag\ShortTag;
 use pocketmine\nbt\tag\StringTag;
 use pocketmine\Player;
 use pocketmine\utils\Binary;
+use function array_map;
+use function base64_decode;
+use function base64_encode;
+use function bin2hex;
+use function file_get_contents;
+use function get_class;
+use function hex2bin;
+use function json_decode;
+use const DIRECTORY_SEPARATOR;
 
 class Item implements ItemIds, \JsonSerializable{
 	public const TAG_ENCH = "ench";
@@ -148,7 +157,7 @@ class Item implements ItemIds, \JsonSerializable{
 	}
 
 	/**
-	 * @param $index
+	 * @param int $index
 	 *
 	 * @return Item|null
 	 */
@@ -195,6 +204,43 @@ class Item implements ItemIds, \JsonSerializable{
 		$this->id = $id;
 		$this->meta = $variant !== -1 ? $variant & 0x7FFF : -1;
 		$this->name = $name;
+	}
+
+	/**
+	 * Sets the Item's NBT
+	 *
+	 * @param CompoundTag|string|null $tags
+	 *
+	 * @return Item
+	 */
+	public function setCompoundTag($tags) : Item{
+		if($tags instanceof CompoundTag){
+			$this->setNamedTag($tags);
+		}else{
+			$this->tags = $tags === null ? "" : (string) $tags;
+			$this->cachedNBT = null;
+		}
+
+		return $this;
+	}
+
+	/**
+	 * @deprecated This method returns NBT serialized in a network-dependent format. Prefer use of getNamedTag() instead.
+	 * @see Item::getNamedTag()
+	 *
+	 * Returns the serialized NBT of the Item
+	 * @return string
+	 */
+	public function getCompoundTag() : string{
+		return $this->tags;
+	}
+
+	/**
+	 * Returns whether this Item has a non-empty NBT.
+	 * @return bool
+	 */
+	public function hasCompoundTag() : bool{
+		return $this->tags !== "";
 	}
 
 	/**

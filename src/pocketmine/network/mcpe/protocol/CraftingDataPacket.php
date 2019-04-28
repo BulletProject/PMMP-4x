@@ -30,8 +30,11 @@ use pocketmine\inventory\FurnaceRecipe;
 use pocketmine\inventory\ShapedRecipe;
 use pocketmine\inventory\ShapelessRecipe;
 use pocketmine\item\Item;
-use pocketmine\network\mcpe\handler\SessionHandler;
+use pocketmine\item\ItemFactory;
 use pocketmine\network\mcpe\NetworkBinaryStream;
+use pocketmine\network\mcpe\NetworkSession;
+use function count;
+use function str_repeat;
 
 class CraftingDataPacket extends DataPacket{
 	public const NETWORK_ID = ProtocolInfo::CRAFTING_DATA_PACKET;
@@ -81,6 +84,7 @@ class CraftingDataPacket extends DataPacket{
 						$entry["output"][] = $this->getSlot();
 					}
 					$entry["uuid"] = $this->getUUID()->toString();
+					$entry["block"] = $this->getString();
 
 					break;
 				case self::ENTRY_SHAPED:
@@ -98,14 +102,23 @@ class CraftingDataPacket extends DataPacket{
 						$entry["output"][] = $this->getSlot();
 					}
 					$entry["uuid"] = $this->getUUID()->toString();
+					$entry["block"] = $this->getString();
+
 					break;
 				case self::ENTRY_FURNACE:
 				case self::ENTRY_FURNACE_DATA:
-					$entry["inputId"] = $this->getVarInt();
+					$inputId = $this->getVarInt();
+					$inputData = -1;
 					if($recipeType === self::ENTRY_FURNACE_DATA){
-						$entry["inputDamage"] = $this->getVarInt();
+						$inputData = $this->getVarInt();
+						if($inputData === 0x7fff){
+							$inputData = -1;
+						}
 					}
+					$entry["input"] = ItemFactory::get($inputId, $inputData);
 					$entry["output"] = $this->getSlot();
+					$entry["block"] = $this->getString();
+
 					break;
 				case self::ENTRY_MULTI:
 					$entry["uuid"] = $this->getUUID()->toString();
@@ -144,6 +157,7 @@ class CraftingDataPacket extends DataPacket{
 		}
 
 		$stream->put(str_repeat("\x00", 16)); //Null UUID
+		$stream->putString("crafting_table"); //TODO: blocktype (no prefix) (this might require internal API breaks)
 
 		return CraftingDataPacket::ENTRY_SHAPELESS;
 	}
@@ -165,23 +179,21 @@ class CraftingDataPacket extends DataPacket{
 		}
 
 		$stream->put(str_repeat("\x00", 16)); //Null UUID
+		$stream->putString("crafting_table"); //TODO: blocktype (no prefix) (this might require internal API breaks)
 
 		return CraftingDataPacket::ENTRY_SHAPED;
 	}
 
-	private static function writeFurnaceRecipe(FurnaceRecipe $recipe, NetworkBinaryStream $stream) : int{
+	private static function writeFurnaceRecipe(FurnaceRecipe $recipe, NetworkBinaryStream $stream){
+		$stream->putVarInt($recipe->getInput()->getId());
+		$result = CraftingDataPacket::ENTRY_FURNACE;
 		if(!$recipe->getInput()->hasAnyDamageValue()){ //Data recipe
-			$stream->putVarInt($recipe->getInput()->getId());
 			$stream->putVarInt($recipe->getInput()->getDamage());
-			$stream->putSlot($recipe->getResult());
-
-			return CraftingDataPacket::ENTRY_FURNACE_DATA;
-		}else{
-			$stream->putVarInt($recipe->getInput()->getId());
-			$stream->putSlot($recipe->getResult());
-
-			return CraftingDataPacket::ENTRY_FURNACE;
+			$result = CraftingDataPacket::ENTRY_FURNACE_DATA;
 		}
+		$stream->putSlot($recipe->getResult());
+		$stream->putString("furnace"); //TODO: blocktype (no prefix) (this might require internal API breaks)
+		return $result;
 	}
 
 	public function addShapelessRecipe(ShapelessRecipe $recipe) : void{

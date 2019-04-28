@@ -28,6 +28,11 @@ namespace pocketmine\network\mcpe\protocol;
 use pocketmine\network\mcpe\handler\SessionHandler;
 use pocketmine\network\mcpe\NetworkBinaryStream;
 use pocketmine\utils\Utils;
+use function bin2hex;
+use function get_class;
+use function is_object;
+use function is_string;
+use function method_exists;
 
 abstract class DataPacket extends NetworkBinaryStream{
 
@@ -61,19 +66,32 @@ abstract class DataPacket extends NetworkBinaryStream{
 		return false;
 	}
 
-	public function decode() : void{
+	/**
+	 * @throws \OutOfBoundsException
+	 * @throws \UnexpectedValueException
+	 */
+	public function decode(){
 		$this->offset = 0;
 		$this->decodeHeader();
 		$this->decodePayload();
 	}
 
-	protected function decodeHeader() : void{
+	/**
+	 * @throws \OutOfBoundsException
+	 * @throws \UnexpectedValueException
+	 */
+	protected function decodeHeader(){
 		$pid = $this->getUnsignedVarInt();
-		assert($pid === static::NETWORK_ID);
+		if($pid !== static::NETWORK_ID){
+			throw new \UnexpectedValueException("Expected " . static::NETWORK_ID . " for packet ID, got $pid");
+		}
 	}
 
 	/**
 	 * Note for plugin developers: If you're adding your own packets, you should perform decoding in here.
+	 *
+	 * @throws \OutOfBoundsException
+	 * @throws \UnexpectedValueException
 	 */
 	protected function decodePayload() : void{
 

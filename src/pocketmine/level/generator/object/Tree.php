@@ -31,6 +31,7 @@ use pocketmine\block\utils\WoodType;
 use pocketmine\block\Wood;
 use pocketmine\level\ChunkManager;
 use pocketmine\utils\Random;
+use function abs;
 
 abstract class Tree{
 	/** @var Block */

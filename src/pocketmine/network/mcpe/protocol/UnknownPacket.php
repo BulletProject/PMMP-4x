@@ -25,7 +25,9 @@ declare(strict_types=1);
 namespace pocketmine\network\mcpe\protocol;
 
 
-use pocketmine\network\mcpe\handler\SessionHandler;
+use pocketmine\network\mcpe\NetworkSession;
+use function ord;
+use function strlen;
 
 class UnknownPacket extends DataPacket{
 	public const NETWORK_ID = -1; //Invalid, do not try to write this

@@ -35,6 +35,8 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\network\mcpe\protocol\LevelEventPacket;
 use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 use pocketmine\utils\Color;
+use function round;
+use function sqrt;
 
 class SplashPotion extends Throwable{
 
@@ -86,7 +88,7 @@ class SplashPotion extends Throwable{
 			if(!$this->willLinger()){
 				foreach($this->level->getNearbyEntities($this->boundingBox->expandedCopy(4.125, 2.125, 4.125), $this) as $entity){
 					if($entity instanceof Living and $entity->isAlive()){
-						$distanceSquared = $entity->distanceSquared($this);
+						$distanceSquared = $entity->add(0, $entity->getEyeHeight(), 0)->distanceSquared($this);
 						if($distanceSquared > 16){ //4 blocks
 							continue;
 						}

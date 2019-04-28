@@ -29,12 +29,16 @@ use pocketmine\entity\Attribute;
 use pocketmine\entity\Entity;
 use pocketmine\item\Item;
 use pocketmine\item\ItemFactory;
+use pocketmine\item\ItemIds;
 use pocketmine\math\Vector3;
-use pocketmine\nbt\LittleEndianNBTStream;
+use pocketmine\nbt\NetworkLittleEndianNBTStream;
+use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\network\mcpe\protocol\types\CommandOriginData;
 use pocketmine\network\mcpe\protocol\types\EntityLink;
 use pocketmine\utils\BinaryStream;
 use pocketmine\utils\UUID;
+use function count;
+use function strlen;
 
 class NetworkBinaryStream extends BinaryStream{
 	/** @var LittleEndianNBTStream */
@@ -80,12 +84,17 @@ class NetworkBinaryStream extends BinaryStream{
 		$cnt = $auxValue & 0xff;
 
 		$nbtLen = $this->getLShort();
-		$compound = null;
-		if($nbtLen > 0){
-			if(self::$itemNbtSerializer === null){
-				self::$itemNbtSerializer = new LittleEndianNBTStream();
+
+		/** @var CompoundTag|string $nbt */
+		$nbt = "";
+		if($nbtLen === 0xffff){
+			$c = $this->getByte();
+			if($c !== 1){
+				throw new \UnexpectedValueException("Unexpected NBT count $c");
 			}
-			$compound = self::$itemNbtSerializer->read($this->get($nbtLen));
+			$nbt = (new NetworkLittleEndianNBTStream())->read($this->buffer, false, $this->offset, 512);
+		}elseif($nbtLen !== 0){
+			throw new \UnexpectedValueException("Unexpected fake NBT length $nbtLen");
 		}
 
 		//TODO
@@ -98,7 +107,11 @@ class NetworkBinaryStream extends BinaryStream{
 			$this->getString();
 		}
 
-		return ItemFactory::get($id, $data, $cnt, $compound);
+		if($id === ItemIds::SHIELD){
+			$this->getVarLong(); //"blocking tick" (ffs mojang)
+		}
+
+		return ItemFactory::get($id, $data, $cnt, $nbt);
 	}
 
 
@@ -113,24 +126,20 @@ class NetworkBinaryStream extends BinaryStream{
 		$auxValue = (($item->getDamage() & 0x7fff) << 8) | $item->getCount();
 		$this->putVarInt($auxValue);
 
-		$nbt = "";
-		$nbtLen = 0;
-		if($item->hasNamedTag()){
-			if(self::$itemNbtSerializer === null){
-				self::$itemNbtSerializer = new LittleEndianNBTStream();
-			}
-			$nbt = self::$itemNbtSerializer->write($item->getNamedTag());
-			$nbtLen = strlen($nbt);
-			if($nbtLen > 32767){
-				throw new \InvalidArgumentException("NBT encoded length must be < 32768, got $nbtLen bytes");
-			}
+		if($item->hasCompoundTag()){
+			$this->putLShort(0xffff);
+			$this->putByte(1); //TODO: some kind of count field? always 1 as of 1.9.0
+			$this->put((new NetworkLittleEndianNBTStream())->write($item->getNamedTag()));
+		}else{
+			$this->putLShort(0);
 		}
-
-		$this->putLShort($nbtLen);
-		$this->put($nbt);
 
 		$this->putVarInt(0); //CanPlaceOn entry count (TODO)
 		$this->putVarInt(0); //CanDestroy entry count (TODO)
+
+		if($item->getId() === ItemIds::SHIELD){
+			$this->putVarLong(0); //"blocking tick" (ffs mojang)
+		}
 	}
 
 	/**

@@ -28,7 +28,17 @@ use pocketmine\block\BlockFactory;
 use pocketmine\entity\Entity;
 use pocketmine\entity\Living;
 use pocketmine\nbt\tag\CompoundTag;
-use pocketmine\tile\Skull;
+use function constant;
+use function defined;
+use function explode;
+use function get_class;
+use function gettype;
+use function is_numeric;
+use function is_object;
+use function is_string;
+use function str_replace;
+use function strtoupper;
+use function trim;
 
 /**
  * Manages Item instance creation and registration
@@ -324,25 +334,27 @@ class ItemFactory{
 	/**
 	 * Returns an instance of the Item with the specified id, meta, count and NBT.
 	 *
-	 * @param int         $id
-	 * @param int         $meta
-	 * @param int         $count
-	 * @param CompoundTag $tags
+	 * @param int                     $id
+	 * @param int                     $meta
+	 * @param int                     $count
+	 * @param CompoundTag|string|null $tags
 	 *
 	 * @return Item
 	 * @throws \InvalidArgumentException
 	 */
-	public static function get(int $id, int $meta = 0, int $count = 1, ?CompoundTag $tags = null) : Item{
-		/** @var Item $item */
-		$item = null;
-		if($meta !== -1){
-			if(isset(self::$list[$offset = self::getListOffset($id, $meta)])){
-				$item = clone self::$list[$offset];
-			}elseif(isset(self::$list[$zero = self::getListOffset($id, 0)]) and self::$list[$zero] instanceof Durable){
-				/** @var Durable $item */
-				$item = clone self::$list[$zero];
-				$item->setDamage($meta);
-			}elseif($id < 256){ //intentionally includes negatives, for extended block IDs
+	public static function get(int $id, int $meta = 0, int $count = 1, $tags = null) : Item{
+		if(!is_string($tags) and !($tags instanceof CompoundTag) and $tags !== null){
+			throw new \TypeError("`tags` argument must be a string or CompoundTag instance, " . (is_object($tags) ? "instance of " . get_class($tags) : gettype($tags)) . " given");
+		}
+
+		try{
+			/** @var Item|null $listed */
+			$listed = self::$list[self::getListOffset($id)];
+			if($listed !== null){
+				$item = clone $listed;
+			}elseif($id >= 0 and $id < 256){ //intentionally excludes negatives because extended blocks aren't supported yet
+				/* Blocks must have a damage value 0-15, but items can have damage value -1 to indicate that they are
+				 * crafting ingredients with any-damage. */
 				$item = new ItemBlock($id, $meta);
 			}
 		}

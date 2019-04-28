@@ -35,7 +35,11 @@ use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\timings\Timings;
 use pocketmine\timings\TimingsHandler;
-use pocketmine\utils\Utils;
+use function current;
+use function get_class;
+use function in_array;
+use function is_a;
+use function reset;
 
 abstract class Tile extends Position{
 
@@ -85,6 +89,7 @@ abstract class Tile extends Position{
 	/**
 	 * @param Level       $level
 	 * @param CompoundTag $nbt
+	 * @param mixed       ...$args
 	 *
 	 * @return Tile|null
 	 */

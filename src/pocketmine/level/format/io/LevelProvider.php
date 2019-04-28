@@ -24,6 +24,9 @@ declare(strict_types=1);
 namespace pocketmine\level\format\io;
 
 use pocketmine\level\format\Chunk;
+use pocketmine\level\format\io\exception\CorruptedChunkException;
+use pocketmine\level\format\io\exception\UnsupportedChunkFormatException;
+use pocketmine\math\Vector3;
 
 interface LevelProvider{
 
@@ -80,13 +83,49 @@ interface LevelProvider{
 	 *
 	 * @return null|Chunk
 	 *
-	 * @throws \Exception any of a range of exceptions that could be thrown while reading chunks. See individual
-	 * implementations for details.
+	 * @throws CorruptedChunkException
+	 * @throws UnsupportedChunkFormatException
 	 */
 	public function loadChunk(int $chunkX, int $chunkZ) : ?Chunk;
 
 	/**
-	 * Performs garbage collection in the level provider, such as cleaning up regions in Region-based worlds.
+	 * @return string
+	 */
+	public function getName() : string;
+
+	/**
+	 * @return int
+	 */
+	public function getTime() : int;
+
+	/**
+	 * @param int $value
+	 */
+	public function setTime(int $value);
+
+	/**
+	 * @return int
+	 */
+	public function getSeed() : int;
+
+	/**
+	 * @param int $value
+	 */
+	public function setSeed(int $value);
+
+	/**
+	 * @return Vector3
+	 */
+	public function getSpawn() : Vector3;
+
+	/**
+	 * @param Vector3 $pos
+	 */
+	public function setSpawn(Vector3 $pos);
+
+	/**
+	 * Returns the world difficulty. This will be one of the Level constants.
+	 * @return int
 	 */
 	public function doGarbageCollection() : void;
 

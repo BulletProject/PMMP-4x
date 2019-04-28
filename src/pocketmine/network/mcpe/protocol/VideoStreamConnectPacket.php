@@ -25,39 +25,34 @@ namespace pocketmine\network\mcpe\protocol;
 
 #include <rules/DataPacket.h>
 
-use pocketmine\network\mcpe\handler\SessionHandler;
+use pocketmine\network\mcpe\NetworkSession;
 
-class AddHangingEntityPacket extends DataPacket{
-	public const NETWORK_ID = ProtocolInfo::ADD_HANGING_ENTITY_PACKET;
+class VideoStreamConnectPacket extends DataPacket/* implements ClientboundPacket*/{
+	public const NETWORK_ID = ProtocolInfo::VIDEO_STREAM_CONNECT_PACKET;
 
-	/** @var int|null */
-	public $entityUniqueId = null;
+	public const ACTION_CONNECT = 0;
+	public const ACTION_DISCONNECT = 1;
+
+	/** @var string */
+	public $serverUri;
+	/** @var float */
+	public $frameSendFrequency;
 	/** @var int */
-	public $entityRuntimeId;
-	/** @var int */
-	public $x;
-	/** @var int */
-	public $y;
-	/** @var int */
-	public $z;
-	/** @var int */
-	public $direction;
+	public $action;
 
 	protected function decodePayload() : void{
-		$this->entityUniqueId = $this->getEntityUniqueId();
-		$this->entityRuntimeId = $this->getEntityRuntimeId();
-		$this->getBlockPosition($this->x, $this->y, $this->z);
-		$this->direction = $this->getVarInt();
+		$this->serverUri = $this->getString();
+		$this->frameSendFrequency = $this->getLFloat();
+		$this->action = $this->getByte();
 	}
 
 	protected function encodePayload() : void{
-		$this->putEntityUniqueId($this->entityUniqueId ?? $this->entityRuntimeId);
-		$this->putEntityRuntimeId($this->entityRuntimeId);
-		$this->putBlockPosition($this->x, $this->y, $this->z);
-		$this->putVarInt($this->direction);
+		$this->putString($this->serverUri);
+		$this->putLFloat($this->frameSendFrequency);
+		$this->putByte($this->action);
 	}
 
-	public function handle(SessionHandler $handler) : bool{
-		return $handler->handleAddHangingEntity($this);
+	public function handle(NetworkSession $session) : bool{
+		return $session->handleVideoStreamConnect($this);
 	}
 }

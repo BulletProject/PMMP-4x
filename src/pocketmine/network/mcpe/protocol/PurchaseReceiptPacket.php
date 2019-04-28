@@ -25,7 +25,8 @@ namespace pocketmine\network\mcpe\protocol;
 
 #include <rules/DataPacket.h>
 
-use pocketmine\network\mcpe\handler\SessionHandler;
+use pocketmine\network\mcpe\NetworkSession;
+use function count;
 
 class PurchaseReceiptPacket extends DataPacket{
 	public const NETWORK_ID = ProtocolInfo::PURCHASE_RECEIPT_PACKET;

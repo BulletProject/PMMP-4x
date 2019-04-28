@@ -66,9 +66,11 @@ class Sugarcane extends Flowable{
 					if($b->getId() === self::AIR){
 						$ev = new BlockGrowEvent($b, BlockFactory::get(Block::SUGARCANE_BLOCK));
 						$ev->call();
-						if(!$ev->isCancelled()){
-							$this->getLevel()->setBlock($b, $ev->getNewState());
+						if($ev->isCancelled()){
+							break;
 						}
+						$this->getLevel()->setBlock($b, $ev->getNewState(), true);
+					}else{
 						break;
 					}
 				}

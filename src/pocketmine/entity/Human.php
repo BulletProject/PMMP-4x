@@ -56,15 +56,20 @@ use pocketmine\network\mcpe\protocol\PlayerSkinPacket;
 use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
 use pocketmine\Player;
 use pocketmine\utils\UUID;
+use function array_filter;
+use function array_merge;
+use function array_rand;
+use function array_values;
+use function ceil;
+use function max;
+use function min;
+use function mt_rand;
+use function random_int;
+use function strlen;
+use const INT32_MAX;
+use const INT32_MIN;
 
 class Human extends Creature implements ProjectileSource, InventoryHolder{
-
-	public const DATA_PLAYER_FLAG_SLEEP = 1;
-	public const DATA_PLAYER_FLAG_DEAD = 2; //TODO: CHECK
-
-	public const DATA_PLAYER_FLAGS = 26;
-
-	public const DATA_PLAYER_BED_POSITION = 28;
 
 	/** @var PlayerInventory */
 	protected $inventory;
@@ -192,18 +197,13 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 		$old = $attr->getValue();
 		$attr->setValue($new);
 
-		$reset = false;
 		// ranges: 18-20 (regen), 7-17 (none), 1-6 (no sprint), 0 (health depletion)
 		foreach([17, 6, 0] as $bound){
 			if(($old > $bound) !== ($new > $bound)){
-				$reset = true;
+				$this->foodTickTimer = 0;
 				break;
 			}
 		}
-		if($reset){
-			$this->foodTickTimer = 0;
-		}
-
 	}
 
 	public function getMaxFood() : float{
@@ -290,7 +290,7 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 				$food = $this->getFood();
 				if($food > 0){
 					$food--;
-					$this->setFood($food);
+					$this->setFood(max($food, 0));
 				}
 			}
 		}
@@ -567,7 +567,9 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 	}
 
 	public function getXpDropAmount() : int{
-		return (int) min(100, $this->getCurrentTotalXp());
+		//this causes some XP to be lost on death when above level 1 (by design), dropping at most enough points for
+		//about 7.5 levels of XP.
+		return (int) min(100, 7 * $this->getXpLevel());
 	}
 
 	public function getInventory(){

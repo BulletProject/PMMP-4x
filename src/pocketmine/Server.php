@@ -104,7 +104,6 @@ use pocketmine\tile\Tile;
 use pocketmine\timings\Timings;
 use pocketmine\timings\TimingsHandler;
 use pocketmine\updater\AutoUpdater;
-use pocketmine\utils\Binary;
 use pocketmine\utils\Config;
 use pocketmine\utils\Internet;
 use pocketmine\utils\MainLogger;
@@ -112,6 +111,76 @@ use pocketmine\utils\Terminal;
 use pocketmine\utils\TextFormat;
 use pocketmine\utils\Utils;
 use pocketmine\utils\UUID;
+use function array_filter;
+use function array_key_exists;
+use function array_shift;
+use function array_sum;
+use function asort;
+use function assert;
+use function base64_encode;
+use function bin2hex;
+use function class_exists;
+use function count;
+use function define;
+use function explode;
+use function extension_loaded;
+use function file_exists;
+use function file_get_contents;
+use function file_put_contents;
+use function filemtime;
+use function function_exists;
+use function get_class;
+use function getmypid;
+use function getopt;
+use function gettype;
+use function implode;
+use function ini_get;
+use function ini_set;
+use function is_array;
+use function is_bool;
+use function is_dir;
+use function is_object;
+use function is_string;
+use function is_subclass_of;
+use function json_decode;
+use function max;
+use function microtime;
+use function min;
+use function mkdir;
+use function ob_end_flush;
+use function pcntl_signal;
+use function pcntl_signal_dispatch;
+use function preg_replace;
+use function random_bytes;
+use function random_int;
+use function realpath;
+use function register_shutdown_function;
+use function rename;
+use function round;
+use function scandir;
+use function sleep;
+use function spl_object_hash;
+use function sprintf;
+use function str_repeat;
+use function str_replace;
+use function stripos;
+use function strlen;
+use function strrpos;
+use function strtolower;
+use function substr;
+use function time;
+use function touch;
+use function trim;
+use const DIRECTORY_SEPARATOR;
+use const INT32_MAX;
+use const INT32_MIN;
+use const PHP_EOL;
+use const PHP_INT_MAX;
+use const PTHREADS_INHERIT_NONE;
+use const SCANDIR_SORT_NONE;
+use const SIGHUP;
+use const SIGINT;
+use const SIGTERM;
 
 /**
  * The class that manages everything
@@ -225,15 +294,6 @@ class Server{
 	private $network;
 	/** @var bool */
 	private $networkCompressionAsync = true;
-
-	/** @var bool */
-	private $autoTickRate = true;
-	/** @var int */
-	private $autoTickRateLimit = 20;
-	/** @var bool */
-	private $alwaysTickPlayers = false;
-	/** @var int */
-	private $baseTickRate = 1;
 
 	/** @var int */
 	private $autoSaveTicker = 0;
@@ -968,7 +1028,7 @@ class Server{
 	 */
 	public function unloadLevel(Level $level, bool $forceUnload = false) : bool{
 		if($level === $this->getDefaultLevel() and !$forceUnload){
-			throw new \InvalidStateException("The default level cannot be unloaded while running, please switch levels.");
+			throw new \InvalidStateException("The default world cannot be unloaded while running, please switch worlds.");
 		}
 
 		return $level->onUnload($forceUnload);
@@ -994,7 +1054,7 @@ class Server{
 	 */
 	public function loadLevel(string $name) : bool{
 		if(trim($name) === ""){
-			throw new LevelException("Invalid empty level name");
+			throw new LevelException("Invalid empty world name");
 		}
 		if($this->isLevelLoaded($name)){
 			return true;
@@ -1016,21 +1076,23 @@ class Server{
 			]));
 			return false;
 		}
-		$providerClass = array_shift($providers);
-
+		/**
+		 * @var LevelProvider $provider
+		 * @see LevelProvider::__construct()
+		 */
+		$provider = new $providerClass($path);
 		try{
-			/** @see LevelProvider::__construct() */
-			$level = new Level($this, $name, new $providerClass($path));
-		}catch(UnsupportedLevelFormatException $e){
-			$this->logger->error($this->language->translateString("pocketmine.level.loadError", [$name, $e->getMessage()]));
+			GeneratorManager::getGenerator($provider->getGenerator(), true);
+		}catch(\InvalidArgumentException $e){
+			$this->logger->error($this->getLanguage()->translateString("pocketmine.level.loadError", [$name, "Unknown generator \"" . $provider->getGenerator() . "\""]));
 			return false;
 		}
+
+		$level = new Level($this, $name, $provider);
 
 		$this->levels[$level->getId()] = $level;
 
 		(new LevelLoadEvent($level))->call();
-
-		$level->setTickRate($this->baseTickRate);
 
 		return true;
 	}
@@ -1050,7 +1112,7 @@ class Server{
 			return false;
 		}
 
-		$seed = $seed ?? Binary::readInt(random_bytes(4));
+		$seed = $seed ?? random_int(INT32_MIN, INT32_MAX);
 
 		if(!isset($options["preset"])){
 			$options["preset"] = $this->getConfigString("generator-settings", "");
@@ -1060,7 +1122,12 @@ class Server{
 			$generator = GeneratorManager::getGenerator($this->getLevelType());
 		}
 
-		$providerClass = LevelProviderManager::getDefault();
+		if(($providerClass = LevelProviderManager::getProviderByName($this->getProperty("level-settings.default-format", "pmanvil"))) === null){
+			$providerClass = LevelProviderManager::getProviderByName("pmanvil");
+			if($providerClass === null){
+				throw new \InvalidStateException("Default world provider has not been registered");
+			}
+		}
 
 		$path = $this->getDataPath() . "worlds/" . $name . "/";
 		/** @var LevelProvider $providerClass */
@@ -1069,8 +1136,6 @@ class Server{
 		/** @see LevelProvider::__construct() */
 		$level = new Level($this, $name, new $providerClass($path));
 		$this->levels[$level->getId()] = $level;
-
-		$level->setTickRate($this->baseTickRate);
 
 		(new LevelInitEvent($level))->call();
 
@@ -1426,8 +1491,6 @@ class Server{
 				"announce-player-achievements" => true,
 				"spawn-protection" => 16,
 				"max-players" => 20,
-				"spawn-animals" => true,
-				"spawn-mobs" => true,
 				"gamemode" => 0,
 				"force-gamemode" => false,
 				"hardcore" => false,
@@ -1483,7 +1546,7 @@ class Server{
 				$this->logger->warning(str_repeat("-", 40));
 			}
 
-			if(((int) ini_get('zend.assertions')) > 0 and ((bool) $this->getProperty("debug.assertions.warn-if-enabled", true)) !== false){
+			if(((int) ini_get('zend.assertions')) !== -1){
 				$this->logger->warning("Debugging assertions are enabled, this may impact on performance. To disable them, set `zend.assertions = -1` in php.ini.");
 			}
 
@@ -1522,13 +1585,6 @@ class Server{
 				NetworkCompression::$LEVEL = 7;
 			}
 			$this->networkCompressionAsync = (bool) $this->getProperty("network.async-compression", true);
-
-			NetworkCipher::$ENABLED = (bool) $this->getProperty("network.enable-encryption", true);
-
-			$this->autoTickRate = (bool) $this->getProperty("level-settings.auto-tick-rate", true);
-			$this->autoTickRateLimit = (int) $this->getProperty("level-settings.auto-tick-rate-limit", 20);
-			$this->alwaysTickPlayers = (bool) $this->getProperty("level-settings.always-tick-players", false);
-			$this->baseTickRate = (int) $this->getProperty("level-settings.base-tick-rate", 1);
 
 			$this->doTitleTick = ((bool) $this->getProperty("console.title-tick", true)) && Terminal::hasFormattingCodes();
 
@@ -1624,7 +1680,6 @@ class Server{
 			Entity::init();
 			Tile::init();
 			BlockFactory::init();
-			BlockFactory::registerStaticRuntimeIdMappings();
 			Enchantment::init();
 			ItemFactory::init();
 			Item::initCreativeItems();
@@ -1663,7 +1718,9 @@ class Server{
 			GeneratorManager::registerDefaultGenerators();
 
 			foreach((array) $this->getProperty("worlds", []) as $name => $options){
-				if(!is_array($options)){
+				if($options === null){
+					$options = [];
+				}elseif(!is_array($options)){
 					continue;
 				}
 				if(!$this->loadLevel($name)){
@@ -1993,7 +2050,7 @@ class Server{
 	}
 
 	public function reload(){
-		$this->logger->info("Saving levels...");
+		$this->logger->info("Saving worlds...");
 
 		foreach($this->levels as $level){
 			$level->save();
@@ -2071,7 +2128,7 @@ class Server{
 				$player->close($player->getLeaveMessage(), $this->getProperty("settings.shutdown-message", "Server closed"));
 			}
 
-			$this->getLogger()->debug("Unloading all levels");
+			$this->getLogger()->debug("Unloading all worlds");
 			foreach($this->getLevels() as $level){
 				$this->unloadLevel($level, true);
 			}
@@ -2103,9 +2160,6 @@ class Server{
 					$this->network->unregisterInterface($interface);
 				}
 			}
-
-			$this->getLogger()->debug("Collecting cycles");
-			gc_collect_cycles();
 		}catch(\Throwable $e){
 			$this->logger->logException($e);
 			$this->logger->emergency("Crashed while crashing, killing process");
@@ -2176,6 +2230,7 @@ class Server{
 	 * @param array|null $trace
 	 */
 	public function exceptionHandler(\Throwable $e, $trace = null){
+		while(@ob_end_flush()){}
 		global $lastError;
 
 		if($trace === null){
@@ -2198,7 +2253,7 @@ class Server{
 			"fullFile" => $e->getFile(),
 			"file" => $errfile,
 			"line" => $errline,
-			"trace" => Utils::getTrace(0, $trace)
+			"trace" => $trace
 		];
 
 		global $lastExceptionError, $lastError;
@@ -2207,6 +2262,7 @@ class Server{
 	}
 
 	public function crashDump(){
+		while(@ob_end_flush()){}
 		if(!$this->isRunning){
 			return;
 		}
@@ -2237,7 +2293,7 @@ class Server{
 				if(is_string($plugin)){
 					$p = $this->pluginManager->getPlugin($plugin);
 					if($p instanceof Plugin and !($p->getPluginLoader() instanceof PharPluginLoader)){
-						$report = false;
+						$this->logger->debug("Not sending crashdump due to caused by non-phar plugin");
 					}
 				}
 
@@ -2279,6 +2335,7 @@ class Server{
 		//Force minimum uptime to be >= 120 seconds, to reduce the impact of spammy crash loops
 		$spacing = ((int) \pocketmine\START_TIME) - time() + 120;
 		if($spacing > 0){
+			echo "--- Waiting $spacing seconds to throttle automatic restart (you can kill the process safely now) ---" . PHP_EOL;
 			sleep($spacing);
 		}
 		@Utils::kill(getmypid());
@@ -2382,12 +2439,10 @@ class Server{
 		$p->sendDataPacket($pk);
 	}
 
-	private function checkTickUpdates(int $currentTick) : void{
-		if($this->alwaysTickPlayers){
-			foreach($this->players as $p){
-				if($p->spawned){
-					$p->onUpdate($currentTick);
-				}
+	private function checkTickUpdates(int $currentTick, float $tickTime) : void{
+		foreach($this->players as $p){
+			if(!$p->loggedIn and ($tickTime - $p->creationTime) >= 10){
+				$p->close("", "Login timeout");
 			}
 		}
 
@@ -2397,32 +2452,13 @@ class Server{
 				// Level unloaded during the tick of a level earlier in this loop, perhaps by plugin
 				continue;
 			}
-			if($level->getTickRate() > $this->baseTickRate and --$level->tickRateCounter > 0){
-				continue;
-			}
 
 			$levelTime = microtime(true);
 			$level->doTick($currentTick);
 			$tickMs = (microtime(true) - $levelTime) * 1000;
 			$level->tickRateTime = $tickMs;
-
-			if($this->autoTickRate){
-				if($tickMs < 50 and $level->getTickRate() > $this->baseTickRate){
-					$level->setTickRate($r = $level->getTickRate() - 1);
-					if($r > $this->baseTickRate){
-						$level->tickRateCounter = $level->getTickRate();
-					}
-					$this->getLogger()->debug("Raising level \"{$level->getName()}\" tick rate to {$level->getTickRate()} ticks");
-				}elseif($tickMs >= 50){
-					if($level->getTickRate() === $this->baseTickRate){
-						$level->setTickRate(max($this->baseTickRate + 1, min($this->autoTickRateLimit, (int) floor($tickMs / 50))));
-						$this->getLogger()->debug(sprintf("Level \"%s\" took %gms, setting tick rate to %d ticks", $level->getName(), (int) round($tickMs, 2), $level->getTickRate()));
-					}elseif(($tickMs / $level->getTickRate()) >= 50 and $level->getTickRate() < $this->autoTickRateLimit){
-						$level->setTickRate($level->getTickRate() + 1);
-						$this->getLogger()->debug(sprintf("Level \"%s\" took %gms, setting tick rate to %d ticks", $level->getName(), (int) round($tickMs, 2), $level->getTickRate()));
-					}
-					$level->tickRateCounter = $level->getTickRate();
-				}
+			if($tickMs >= 50){
+				$this->getLogger()->debug(sprintf("World \"%s\" took too long to tick: %gms (%g ticks)", $level->getName(), $tickMs, round($tickMs / 50, 2)));
 			}
 		}
 	}
@@ -2516,9 +2552,7 @@ class Server{
 				$this->logger->debug("Unhandled raw packet from $address $port: " . bin2hex($payload));
 			}
 		}catch(\Throwable $e){
-			if(\pocketmine\DEBUG > 1){
-				$this->logger->logException($e);
-			}
+			$this->logger->logException($e);
 
 			$this->getNetwork()->blockAddress($address, 600);
 		}
@@ -2573,7 +2607,11 @@ class Server{
 
 		if($this->autoSave and ++$this->autoSaveTicker >= $this->autoSaveTicks){
 			$this->autoSaveTicker = 0;
+			$this->getLogger()->debug("[Auto Save] Saving worlds...");
+			$start = microtime(true);
 			$this->doAutoSave();
+			$time = (microtime(true) - $start);
+			$this->getLogger()->debug("[Auto Save] Save completed in " . ($time >= 1 ? round($time, 3) . "s" : round($time * 1000) . "ms"));
 		}
 
 		if($this->sendUsageTicker > 0 and --$this->sendUsageTicker === 0){
@@ -2605,10 +2643,9 @@ class Server{
 
 		TimingsHandler::tick($this->currentTPS <= $this->profilingTickRate);
 
-		array_shift($this->tickAverage);
-		$this->tickAverage[] = $this->currentTPS;
-		array_shift($this->useAverage);
-		$this->useAverage[] = $this->currentUse;
+		$idx = $this->tickCounter % 20;
+		$this->tickAverage[$idx] = $this->currentTPS;
+		$this->useAverage[$idx] = $this->currentUse;
 
 		if(($this->nextTick - $tickTime) < -1){
 			$this->nextTick = $tickTime;

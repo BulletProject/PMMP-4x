@@ -24,6 +24,15 @@ declare(strict_types=1);
 namespace pocketmine\scheduler;
 
 use pocketmine\utils\Utils;
+use function array_keys;
+use function assert;
+use function count;
+use function get_class;
+use function spl_object_hash;
+use function time;
+use const PHP_INT_MAX;
+use const PTHREADS_INHERIT_CONSTANTS;
+use const PTHREADS_INHERIT_INI;
 
 /**
  * Manages general-purpose worker threads used for processing asynchronous tasks, and the tasks submitted to those
@@ -46,6 +55,10 @@ class AsyncPool{
 
 	/** @var AsyncWorker[] */
 	private $workers = [];
+	/** @var int[] */
+	private $workerUsage = [];
+	/** @var int[] */
+	private $workerLastUsed = [];
 
 	/** @var \Closure[] */
 	private $workerStartHooks = [];
@@ -154,7 +167,9 @@ class AsyncPool{
 		$task->setSubmitted();
 
 		$this->getWorker($worker)->stack($task);
-		$this->taskQueues[$worker]->enqueue($task);
+		$this->workerUsage[$worker]++;
+		$this->taskWorkers[$task->getTaskId()] = $worker;
+		$this->workerLastUsed[$worker] = time();
 	}
 
 	/**
@@ -253,10 +268,11 @@ class AsyncPool{
 
 	public function shutdownUnusedWorkers() : int{
 		$ret = 0;
-		foreach($this->taskQueues as $i => $queue){
-			if($queue->isEmpty()){
+		$time = time();
+		foreach($this->workerUsage as $i => $usage){
+			if($usage === 0 and (!isset($this->workerLastUsed[$i]) or $this->workerLastUsed[$i] + 300 < $time)){
 				$this->workers[$i]->quit();
-				unset($this->workers[$i], $this->taskQueues[$i]);
+				unset($this->workers[$i], $this->workerUsage[$i], $this->workerLastUsed[$i]);
 				$ret++;
 			}
 		}
@@ -288,6 +304,6 @@ class AsyncPool{
 			$worker->quit();
 		}
 		$this->workers = [];
-		$this->taskQueues = [];
+		$this->workerLastUsed = [];
 	}
 }
