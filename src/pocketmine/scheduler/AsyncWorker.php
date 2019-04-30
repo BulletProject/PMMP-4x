@@ -28,6 +28,7 @@ use pocketmine\utils\Utils;
 use pocketmine\Worker;
 use function error_reporting;
 use function gc_enable;
+use function ini_set;
 use function set_error_handler;
 
 class AsyncWorker extends Worker{
@@ -59,6 +60,14 @@ class AsyncWorker extends Worker{
 		}
 
 		gc_enable();
+
+		if($this->memoryLimit > 0){
+			ini_set('memory_limit', $this->memoryLimit . 'M');
+			$this->logger->debug("Set memory limit to " . $this->memoryLimit . " MB");
+		}else{
+			ini_set('memory_limit', '-1');
+			$this->logger->debug("No memory limit set");
+		}
 	}
 
 	public function getLogger() : \ThreadedLogger{
