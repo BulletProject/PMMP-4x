@@ -62,7 +62,7 @@ abstract class Timezone{
 				if(strpos($timezone, "/") === false){
 					$default_timezone = timezone_name_from_abbr($timezone);
 					if($default_timezone !== false){
-						ini_set("date.timezone", $default_timezone);
+						//ini_set("date.timezone", $default_timezone);
 						date_default_timezone_set($default_timezone);
 						break;
 					}else{
@@ -78,7 +78,7 @@ abstract class Timezone{
 			if(($timezone = self::detectSystemTimezone()) and date_default_timezone_set($timezone)){
 				//Success! Timezone has already been set and validated in the if statement.
 				//This here is just for redundancy just in case some program wants to read timezone data from the ini.
-				ini_set("date.timezone", $timezone);
+				//ini_set("date.timezone", $timezone);
 				break;
 			}
 
@@ -88,11 +88,11 @@ abstract class Timezone{
 				and date_default_timezone_set($ip_geolocation_data['timezone'])
 			){
 				//Again, for redundancy.
-				ini_set("date.timezone", $ip_geolocation_data['timezone']);
+				//ini_set("date.timezone", $ip_geolocation_data['timezone']);
 				break;
 			}
 
-			ini_set("date.timezone", "UTC");
+			//ini_set("date.timezone", "UTC");
 			date_default_timezone_set("UTC");
 			$messages[] = "Timezone could not be automatically determined or was set to an invalid value. An incorrect timezone will result in incorrect timestamps on console logs. It has been set to \"UTC\" by default. You can change it on the php.ini file.";
 		}while(false);

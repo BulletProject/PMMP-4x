@@ -62,10 +62,10 @@ class AsyncWorker extends Worker{
 		gc_enable();
 
 		if($this->memoryLimit > 0){
-			ini_set('memory_limit', $this->memoryLimit . 'M');
+			//ini_set('memory_limit', $this->memoryLimit . 'M');
 			$this->logger->debug("Set memory limit to " . $this->memoryLimit . " MB");
 		}else{
-			ini_set('memory_limit', '-1');
+			//ini_set('memory_limit', '-1');
 			$this->logger->debug("No memory limit set");
 		}
 	}
