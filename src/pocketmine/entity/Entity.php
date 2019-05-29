@@ -562,6 +562,8 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	/** @var bool */
 	protected $constructed = false;
 
+	/** @var bool */
+	private $closeInFlight = false;
 
 	public function __construct(Level $level, CompoundTag $nbt){
 		$this->constructed = true;
@@ -593,6 +595,7 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 			throw new \InvalidStateException("Cannot create entities in unloaded chunks");
 		}
 
+		$this->motion = new Vector3(0, 0, 0);
 		if($this->namedtag->hasTag("Motion", ListTag::class)){
 			/** @var float[] $motion */
 			$motion = $this->namedtag->getListTag("Motion")->getAllValues();
@@ -2108,7 +2111,12 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 	 * WARNING: Entities are unusable after this has been executed!
 	 */
 	public function close() : void{
+		if($this->closeInFlight){
+			return;
+		}
+
 		if(!$this->closed){
+			$this->closeInFlight = true;
 			(new EntityDespawnEvent($this))->call();
 			$this->closed = true;
 
@@ -2127,6 +2135,7 @@ abstract class Entity extends Location implements Metadatable, EntityIds{
 
 			$this->namedtag = null;
 			$this->lastDamageCause = null;
+			$this->closeInFlight = false;
 		}
 	}
 

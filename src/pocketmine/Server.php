@@ -797,6 +797,7 @@ class Server{
 	 * @return bool
 	 */
 	public function hasOfflinePlayerData(string $name) : bool{
+		$name = strtolower($name);
 		return file_exists($this->getDataPath() . "players/$name.dat");
 	}
 
@@ -1690,6 +1691,12 @@ class Server{
 			Item::initCreativeItems();
 			Biome::init();
 
+			LevelProviderManager::init();
+			if(extension_loaded("leveldb")){
+				$this->logger->debug($this->getLanguage()->translateString("pocketmine.debug.enable"));
+			}
+			GeneratorManager::registerDefaultGenerators();
+
 			$this->craftingManager = new CraftingManager();
 
 			$this->resourceManager = new ResourcePackManager($this->getDataPath() . "resource_packs" . DIRECTORY_SEPARATOR, $this->logger);
@@ -1710,13 +1717,6 @@ class Server{
 			$this->enablePlugins(PluginLoadOrder::STARTUP);
 
 			$this->network->registerInterface(new RakLibInterface($this));
-
-			LevelProviderManager::init();
-			if(extension_loaded("leveldb")){
-				$this->logger->debug($this->getLanguage()->translateString("pocketmine.debug.enable"));
-			}
-
-			GeneratorManager::registerDefaultGenerators();
 
 			foreach((array) $this->getProperty("worlds", []) as $name => $options){
 				if($options === null){
@@ -2260,6 +2260,7 @@ class Server{
 					$p = $this->pluginManager->getPlugin($plugin);
 					if($p instanceof Plugin and !($p->getPluginLoader() instanceof PharPluginLoader)){
 						$this->logger->debug("Not sending crashdump due to caused by non-phar plugin");
+						$report = false;
 					}
 				}
 
