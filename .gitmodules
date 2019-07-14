@@ -1,8 +1,8 @@
 [submodule "src/pocketmine/lang/locale"]
 	path = src/pocketmine/lang/locale
 	url = https://github.com/pmmp/PocketMine-Language.git
-[submodule "tests/plugins/PocketMine-DevTools"]
-	path = tests/plugins/PocketMine-DevTools
+[submodule "PocketMine-DevTools"]
+	path = PocketMine-DevTools
 	url = https://github.com/pmmp/PocketMine-DevTools.git
 [submodule "src/pocketmine/resources/vanilla"]
 	path = src/pocketmine/resources/vanilla
