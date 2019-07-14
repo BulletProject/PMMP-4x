@@ -18,8 +18,6 @@ build_script:
     
     mkdir artifacts
 
-    git clone https://github.com/pmmp/PocketMine-DevTools --depth=1
-
     C:\projects\pmmp-4x\bin\php\php.exe -d disable_functions=chmod -dphar.readonly=0 PocketMine-DevTools\src\DevTools\ConsoleScript.php --make src,vendor,resources --relative ./ --entry src/pocketmine/PocketMine.php --out artifacts/pmmpAPI3.phar
 
 artifacts:
