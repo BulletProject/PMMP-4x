@@ -26,15 +26,17 @@ namespace pocketmine\entity\hostile;
 
 use pocketmine\block\Block;
 use pocketmine\entity\Ageable;
+use pocketmine\entity\behavior\AvoidMobTypeBehavior;
 use pocketmine\entity\behavior\CreeperSwellBehavior;
-use pocketmine\entity\behavior\FindAttackableTargetBehavior;
 use pocketmine\entity\behavior\FloatBehavior;
 use pocketmine\entity\behavior\HurtByTargetBehavior;
 use pocketmine\entity\behavior\LookAtPlayerBehavior;
 use pocketmine\entity\behavior\MeleeAttackBehavior;
+use pocketmine\entity\behavior\NearestAttackableTargetBehavior;
 use pocketmine\entity\behavior\RandomLookAroundBehavior;
-use pocketmine\entity\behavior\WanderBehavior;
+use pocketmine\entity\behavior\RandomStrollBehavior;
 use pocketmine\entity\Monster;
+use pocketmine\entity\passive\Cat;
 use pocketmine\item\FlintSteel;
 use pocketmine\item\Item;
 use pocketmine\item\ItemFactory;
@@ -92,13 +94,14 @@ class Creeper extends Monster implements Ageable{
 	protected function addBehaviors() : void{
 		$this->behaviorPool->setBehavior(0, new FloatBehavior($this));
 		$this->behaviorPool->setBehavior(1, new CreeperSwellBehavior($this));
-		// TODO: Avoid entity behavior
-		$this->behaviorPool->setBehavior(2, new MeleeAttackBehavior($this, 1.0));
-		$this->behaviorPool->setBehavior(3, new WanderBehavior($this, 0.8));
-		$this->behaviorPool->setBehavior(4, new LookAtPlayerBehavior($this, 8.0));
-		$this->behaviorPool->setBehavior(5, new RandomLookAroundBehavior($this));
+		// TODO: Avoid from ocelot
+		$this->behaviorPool->setBehavior(2, new AvoidMobTypeBehavior($this, Cat::class, null, 6, 1, 1.2));
+		$this->behaviorPool->setBehavior(3, new MeleeAttackBehavior($this, 1.0));
+		$this->behaviorPool->setBehavior(4, new RandomStrollBehavior($this, 0.8));
+		$this->behaviorPool->setBehavior(5, new LookAtPlayerBehavior($this, 8.0));
+		$this->behaviorPool->setBehavior(6, new RandomLookAroundBehavior($this));
 
-		$this->targetBehaviorPool->setBehavior(0, new FindAttackableTargetBehavior($this, Player::class));
+		$this->targetBehaviorPool->setBehavior(0, new NearestAttackableTargetBehavior($this, Player::class, true));
 		$this->targetBehaviorPool->setBehavior(1, new HurtByTargetBehavior($this));
 	}
 

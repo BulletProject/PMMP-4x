@@ -112,7 +112,6 @@ use function array_sum;
 use function asort;
 use function assert;
 use function base64_encode;
-use function bin2hex;
 use function class_exists;
 use function count;
 use function define;
@@ -811,6 +810,7 @@ class Server{
 	 * @return bool
 	 */
 	public function hasOfflinePlayerData(string $name) : bool{
+		$name = strtolower($name);
 		return file_exists($this->getDataPath() . "players/$name.dat");
 	}
 
@@ -904,6 +904,11 @@ class Server{
 	}
 
 	/**
+	 * Returns an online player whose name begins with or equals the given string (case insensitive).
+	 * The closest match will be returned, or null if there are no online matches.
+	 *
+	 * @see Server::getPlayerExact()
+	 *
 	 * @param string $name
 	 *
 	 * @return Player|null
@@ -929,6 +934,8 @@ class Server{
 	}
 
 	/**
+	 * Returns an online player with the given name (case insensitive), or null if not found.
+	 *
 	 * @param string $name
 	 *
 	 * @return Player|null
@@ -945,6 +952,9 @@ class Server{
 	}
 
 	/**
+	 * Returns a list of online players whose names contain with the given string (case insensitive).
+	 * If an exact match is found, only that match is returned.
+	 *
 	 * @param string $partialName
 	 *
 	 * @return Player[]
@@ -1763,6 +1773,12 @@ class Server{
 
 			$this->commandMap = new SimpleCommandMap($this);
 
+			LevelProviderManager::init();
+			if(extension_loaded("leveldb")){
+				$this->logger->debug($this->getLanguage()->translateString("pocketmine.debug.enable"));
+			}
+			GeneratorManager::registerDefaultGenerators();
+
 			$this->craftingManager = new CraftingManager();
 
 			$this->resourceManager = new ResourcePackManager($this->getDataPath() . "resource_packs" . DIRECTORY_SEPARATOR, $this->logger);
@@ -1777,19 +1793,17 @@ class Server{
 
 			register_shutdown_function([$this, "crashDump"]);
 
-			$this->queryRegenerateTask = new QueryRegenerateEvent($this, 5);
+			$this->queryRegenerateTask = new QueryRegenerateEvent($this);
 
 			$this->pluginManager->loadPlugins($this->pluginPath);
+			
+			foreach($this->getAdditionalPluginDirs() as $path){
+				$this->pluginManager->loadPlugins($path);
+			}
+
 			$this->enablePlugins(PluginLoadOrder::STARTUP);
 
 			$this->network->registerInterface(new RakLibInterface($this));
-
-			LevelProviderManager::init();
-			if(extension_loaded("leveldb")){
-				$this->logger->debug($this->getLanguage()->translateString("pocketmine.debug.enable"));
-			}
-
-			GeneratorManager::registerDefaultGenerators();
 
 			foreach((array) $this->getProperty("worlds", []) as $name => $options){
 				if($options === null){
@@ -2163,7 +2177,12 @@ class Server{
 
 		$this->pluginManager->registerInterface(new PharPluginLoader($this->autoloader));
 		$this->pluginManager->registerInterface(new ScriptPluginLoader());
-		$this->pluginManager->loadPlugins($this->pluginPath);
+        $this->pluginManager->loadPlugins($this->pluginPath);
+		
+		foreach($this->getAdditionalPluginDirs() as $path){
+			$this->pluginManager->loadPlugins($path);
+		}
+		
 		$this->enablePlugins(PluginLoadOrder::STARTUP);
 		$this->enablePlugins(PluginLoadOrder::POSTWORLD);
 		TimingsHandler::reload();
@@ -2349,6 +2368,51 @@ class Server{
 			$dump = new CrashDump($this);
 
 			$this->logger->emergency($this->getLanguage()->translateString("pocketmine.crash.submit", [$dump->getPath()]));
+
+			if($this->getProperty("auto-report.enabled", true) !== false){
+				$report = true;
+
+				$stamp = $this->getDataPath() . "crashdumps/.last_crash";
+				$crashInterval = 120; //2 minutes
+				if(file_exists($stamp) and !($report = (filemtime($stamp) + $crashInterval < time()))){
+					$this->logger->debug("Not sending crashdump due to last crash less than $crashInterval seconds ago");
+				}
+				@touch($stamp); //update file timestamp
+
+				$plugin = $dump->getData()["plugin"];
+				if(is_string($plugin)){
+					$p = $this->pluginManager->getPlugin($plugin);
+					if($p instanceof Plugin and !($p->getPluginLoader() instanceof PharPluginLoader)){
+						$this->logger->debug("Not sending crashdump due to caused by non-phar plugin");
+						$report = false;
+					}
+				}
+
+				if($dump->getData()["error"]["type"] === \ParseError::class){
+					$report = false;
+				}
+
+				if(strrpos(\pocketmine\GIT_COMMIT, "-dirty") !== false or \pocketmine\GIT_COMMIT === str_repeat("00", 20)){
+					$this->logger->debug("Not sending crashdump due to locally modified");
+					$report = false; //Don't send crashdumps for locally modified builds
+				}
+
+				if($report){
+					$url = ($this->getProperty("auto-report.use-https", true) ? "https" : "http") . "://" . $this->getProperty("auto-report.host", "crash.pmmp.io") . "/submit/api";
+					$reply = Internet::postURL($url, [
+						"report" => "yes",
+						"name" => $this->getName() . " " . $this->getPocketMineVersion(),
+						"email" => "crash@pocketmine.net",
+						"reportPaste" => base64_encode($dump->getEncodedData())
+					]);
+
+					if($reply !== false and ($data = json_decode($reply)) !== null and isset($data->crashId) and isset($data->crashUrl)){
+						$reportId = $data->crashId;
+						$reportUrl = $data->crashUrl;
+						$this->logger->emergency($this->getLanguage()->translateString("pocketmine.crash.archive", [$reportUrl, $reportId]));
+					}
+				}
+			}
 		}catch(\Throwable $e){
 			$this->logger->logException($e);
 			try{
@@ -2564,7 +2628,7 @@ class Server{
 			if(strlen($payload) > 2 and substr($payload, 0, 2) === "\xfe\xfd" and $this->queryHandler instanceof QueryHandler){
 				$this->queryHandler->handle($interface, $address, $port, $payload);
 			}else{
-				$this->logger->debug("Unhandled raw packet from $address $port: " . bin2hex($payload));
+				$this->logger->debug("Unhandled raw packet from $address $port: " . base64_encode($payload));
 			}
 		}catch(\Throwable $e){
 			$this->logger->logException($e);
@@ -2574,6 +2638,9 @@ class Server{
 		//TODO: add raw packet events
 	}
 
+    private function getAdditionalPluginDirs() : array{
+        return $this->getAltayProperty("additional-plugin-dirs", []);
+    }
 
 	/**
 	 * Tries to execute a server tick
@@ -2613,15 +2680,10 @@ class Server{
 			$this->currentTPS = 20;
 			$this->currentUse = 0;
 
+			($this->queryRegenerateTask = new QueryRegenerateEvent($this))->call();
+
 			$this->network->updateName();
 			$this->network->resetStatistics();
-		}
-
-		if(($this->tickCounter & 0b111111111) === 0){
-			($this->queryRegenerateTask = new QueryRegenerateEvent($this, 5))->call();
-			if($this->queryHandler !== null){
-				$this->queryHandler->regenerateInfo();
-			}
 		}
 
 		if($this->autoSave and ++$this->autoSaveTicker >= $this->autoSaveTicks){

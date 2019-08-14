@@ -27,6 +27,9 @@ namespace pocketmine\level;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\StringTag;
 
+use function strval;
+use function is_bool;
+
 class GameRules{
 
 	public const RULE_COMMAND_BLOCK_OUTPUT = "commandBlockOutput";
@@ -191,7 +194,7 @@ class GameRules{
 	 */
 	public function toStringValue($value) : string{
 		if(is_bool($value)){
-			return $value === true ? "true" : "false";
+			return $value ? "true" : "false";
 		}
 		return strval($value);
 	}

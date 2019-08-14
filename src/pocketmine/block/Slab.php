@@ -78,7 +78,7 @@ abstract class Slab extends Transparent{
 			}
 		}else{ //TODO: collision
 			if($blockReplace->getId() === $this->id){
-				if($blockReplace->getVariant() === $this->meta){
+				if($blockReplace->getVariant() === $this->getVariant()){
 					$this->getLevel()->setBlock($blockReplace, BlockFactory::get($this->getDoubleSlabId(), $this->getVariant()), true);
 
 					return true;
@@ -125,5 +125,9 @@ abstract class Slab extends Transparent{
 				$this->z + 1
 			);
 		}
+	}
+
+	public function isPassable() : bool{
+		return ($this->meta & 0x08) < 0;
 	}
 }

@@ -47,7 +47,7 @@ use pocketmine\nbt\tag\FloatTag;
 use pocketmine\nbt\tag\ListTag;
 use pocketmine\nbt\tag\StringTag;
 use pocketmine\nbt\tag\IntTag;
-use pocketmine\network\mcpe\protocol\EntityEventPacket;
+use pocketmine\network\mcpe\protocol\ActorEventPacket;
 use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 use pocketmine\network\mcpe\protocol\MobEffectPacket;
 use pocketmine\Player;
@@ -91,6 +91,7 @@ abstract class Living extends Entity implements Damageable{
 
 	/** @var int|null */
 	protected $lastAttackerId = null;
+	protected $revengeTimer = 0;
 
 	/** @var bool */
 	protected $leashed = false;
@@ -101,7 +102,10 @@ abstract class Living extends Entity implements Damageable{
 	/** @var int|null */
 	protected $leashedToEntityId = null;
 
-	public $headYaw = 0;
+	/** @var float */
+	protected $moveForward = 0.0;
+	/** @var float */
+	protected $moveStrafing = 0.0;
 
 	abstract public function getName() : string;
 
@@ -150,6 +154,20 @@ abstract class Living extends Entity implements Damageable{
 			$this->setGenericFlag(self::DATA_FLAG_LEASHED, true);
 			$this->propertyManager->setLong(self::DATA_LEAD_HOLDER_EID, $leashedToEntity->getId());
 		}
+	}
+
+	/**
+	 * @return int
+	 */
+	public function getRevengeTimer() : int{
+		return $this->revengeTimer;
+	}
+
+	/**
+	 * @param int $revengeTimer
+	 */
+	public function setRevengeTimer(int $revengeTimer) : void{
+		$this->revengeTimer = $revengeTimer;
 	}
 
 	/**
@@ -247,7 +265,7 @@ abstract class Living extends Entity implements Damageable{
 		parent::setHealth($amount);
 		$this->attributeMap->getAttribute(Attribute::HEALTH)->setValue(ceil($this->getHealth()), true);
 		if($this->isAlive() and !$wasAlive){
-			$this->broadcastEntityEvent(EntityEventPacket::RESPAWN);
+			$this->broadcastEntityEvent(ActorEventPacket::RESPAWN);
 		}
 	}
 
@@ -295,7 +313,7 @@ abstract class Living extends Entity implements Damageable{
 			if($leashedToEntity instanceof Living){
 				$leashNbt->setString("UUID", $leashedToEntity->getUniqueId()->toString());
 			}elseif($leashedToEntity instanceof LeashKnot){
-				$pos = $this->leashedToEntity->getHangingPosition();
+				$pos = $leashedToEntity->getHangingPosition();
 				$leashNbt->setInt("X", $pos->x);
 				$leashNbt->setInt("Y", $pos->y);
 				$leashNbt->setInt("Z", $pos->z);
@@ -661,7 +679,9 @@ abstract class Living extends Entity implements Damageable{
 	}
 
 	public function attack(EntityDamageEvent $source) : void{
-		if($this->attackTime > 0 or $this->noDamageTicks > 0){
+		if($this->noDamageTicks > 0){
+			$source->setCancelled();
+		}elseif($this->attackTime > 0){
 			$lastCause = $this->getLastDamageCause();
 			if($lastCause !== null and $lastCause->getBaseDamage() >= $source->getBaseDamage()){
 				$source->setCancelled();
@@ -715,7 +735,9 @@ abstract class Living extends Entity implements Damageable{
 				$deltaZ = $this->z - $e->z;
 				$this->knockBack($e, $source->getBaseDamage(), $deltaX, $deltaZ, $source->getKnockBack());
 
-				$e->broadcastEntityEvent(EntityEventPacket::ARM_SWING);
+				$e->broadcastEntityEvent(ActorEventPacket::ARM_SWING);
+
+				$this->setRevengeTimer($this->ticksLived);
 
 				if($e instanceof Living){
 					$e->setTargetEntity($this);
@@ -734,7 +756,7 @@ abstract class Living extends Entity implements Damageable{
 	}
 
 	protected function doHitAnimation() : void{
-		$this->broadcastEntityEvent(EntityEventPacket::HURT_ANIMATION);
+		$this->broadcastEntityEvent(ActorEventPacket::HURT_ANIMATION);
 	}
 
 	public function knockBack(Entity $attacker, float $damage, float $x, float $z, float $base = 0.4) : void{
@@ -746,18 +768,18 @@ abstract class Living extends Entity implements Damageable{
 			$f = 1 / $f;
 
 			$motion = clone $this->motion;
-			
+
 			$motion->x /= 2;
 			$motion->y /= 2;
 			$motion->z /= 2;
 			$motion->x += $x * $f * $base;
 			$motion->y += $base;
 			$motion->z += $z * $f * $base;
-			
+
 			if($motion->y > $base){
 				$motion->y = $base;
 			}
-			
+
 			$this->setMotion($motion);
 		}
 	}
@@ -792,7 +814,7 @@ abstract class Living extends Entity implements Damageable{
 	}
 
 	protected function startDeathAnimation() : void{
-		$this->broadcastEntityEvent(EntityEventPacket::DEATH_ANIMATION);
+		$this->broadcastEntityEvent(ActorEventPacket::DEATH_ANIMATION);
 	}
 
 	protected function endDeathAnimation() : void{
@@ -1045,9 +1067,8 @@ abstract class Living extends Entity implements Damageable{
 	 * their heads to turn.
 	 *
 	 * @param Vector3 $target
-	 * @param bool    $onlyHead
 	 */
-	public function lookAt(Vector3 $target, bool $onlyHead = false) : void{
+	public function lookAt(Vector3 $target) : void{
 		$oldYaw = $this->yaw;
 		$horizontal = sqrt(($target->x - $this->x) ** 2 + ($target->z - $this->z) ** 2);
 		$vertical = $target->y - $this->y;
@@ -1058,13 +1079,6 @@ abstract class Living extends Entity implements Damageable{
 		$this->yaw = atan2($zDist, $xDist) / M_PI * 180 - 90;
 		if($this->yaw < 0){
 			$this->yaw += 360.0;
-		}
-
-		if($onlyHead){
-			$this->headYaw = $this->yaw;
-			$this->yaw = $oldYaw;
-		}else{
-			$this->headYaw = $this->yaw;
 		}
 	}
 
@@ -1108,7 +1122,7 @@ abstract class Living extends Entity implements Damageable{
 				$this->setGenericFlag(self::DATA_FLAG_LEASHED, false);
 				$this->propertyManager->setLong(self::DATA_LEAD_HOLDER_EID, -1);
 
-				$this->broadcastEntityEvent(EntityEventPacket::REMOVE_LEASH);
+				$this->broadcastEntityEvent(ActorEventPacket::REMOVE_LEASH);
 			}
 		}
 	}
@@ -1172,7 +1186,7 @@ abstract class Living extends Entity implements Damageable{
 				return true;
 			}
 		}
-		return $this->onInteract($player, $item, $clickPos) ? true : parent::onFirstInteract($player, $item, $clickPos);
+		return $this->onInteract($player, $item, $clickPos) ?: parent::onFirstInteract($player, $item, $clickPos);
 	}
 
 	public function onInteract(Player $player, Item $item, Vector3 $clickPos) : bool{
@@ -1191,5 +1205,33 @@ abstract class Living extends Entity implements Damageable{
 	 */
 	public function getMaxSpawnedInChunk() : int{
 		return 4;
+	}
+
+	/**
+	 * @return float
+	 */
+	public function getMoveForward() : float{
+		return $this->moveForward;
+	}
+
+	/**
+	 * @param float $moveForward
+	 */
+	public function setMoveForward(float $moveForward) : void{
+		$this->moveForward = $moveForward;
+	}
+
+	/**
+	 * @return float
+	 */
+	public function getMoveStrafing() : float{
+		return $this->moveStrafing;
+	}
+
+	/**
+	 * @param float $moveStrafing
+	 */
+	public function setMoveStrafing(float $moveStrafing) : void{
+		$this->moveStrafing = $moveStrafing;
 	}
 }

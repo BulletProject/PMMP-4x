@@ -27,19 +27,21 @@ namespace pocketmine\entity\passive;
 use pocketmine\entity\behavior\FloatBehavior;
 use pocketmine\entity\behavior\FollowOwnerBehavior;
 use pocketmine\entity\behavior\HurtByTargetBehavior;
-use pocketmine\entity\behavior\JumpAttackBehavior;
+use pocketmine\entity\behavior\LeapAtTargetBehavior;
 use pocketmine\entity\behavior\LookAtPlayerBehavior;
 use pocketmine\entity\behavior\MeleeAttackBehavior;
+use pocketmine\entity\behavior\NearestAttackableTargetBehavior;
 use pocketmine\entity\behavior\OwnerHurtByTargetBehavior;
 use pocketmine\entity\behavior\OwnerHurtTargetBehavior;
 use pocketmine\entity\behavior\RandomLookAroundBehavior;
-use pocketmine\entity\behavior\SittingBehavior;
-use pocketmine\entity\behavior\WanderBehavior;
+use pocketmine\entity\behavior\StayWhileSittingBehavior;
+use pocketmine\entity\behavior\RandomStrollBehavior;
 use pocketmine\entity\Entity;
+use pocketmine\entity\hostile\Skeleton;
 use pocketmine\entity\Tamable;
 use pocketmine\item\Item;
 use pocketmine\math\Vector3;
-use pocketmine\network\mcpe\protocol\EntityEventPacket;
+use pocketmine\network\mcpe\protocol\ActorEventPacket;
 use pocketmine\Player;
 use function mt_rand;
 
@@ -48,20 +50,23 @@ class Wolf extends Tamable{
 
 	public $width = 0.6;
 	public $height = 0.8;
+	/** @var StayWhileSittingBehavior */
+	protected $behaviorSitting;
 
 	protected function addBehaviors() : void{
 		$this->behaviorPool->setBehavior(0, new FloatBehavior($this));
-		$this->behaviorPool->setBehavior(1, new SittingBehavior($this));
-		$this->behaviorPool->setBehavior(2, new JumpAttackBehavior($this, 1.0));
-		$this->behaviorPool->setBehavior(3, new MeleeAttackBehavior($this, 2.0));
-		$this->behaviorPool->setBehavior(4, new FollowOwnerBehavior($this, 2.0));
-		$this->behaviorPool->setBehavior(5, new WanderBehavior($this, 1.0));
+		$this->behaviorPool->setBehavior(1, $this->behaviorSitting = new StayWhileSittingBehavior($this));
+		$this->behaviorPool->setBehavior(2, new LeapAtTargetBehavior($this, 0.4));
+		$this->behaviorPool->setBehavior(3, new MeleeAttackBehavior($this, 1.0));
+		$this->behaviorPool->setBehavior(4, new FollowOwnerBehavior($this, 1, 10 ,2));
+		$this->behaviorPool->setBehavior(5, new RandomStrollBehavior($this, 1.0));
 		$this->behaviorPool->setBehavior(6, new LookAtPlayerBehavior($this, 8.0));
 		$this->behaviorPool->setBehavior(7, new RandomLookAroundBehavior($this));
 
-		$this->targetBehaviorPool->setBehavior(0, new HurtByTargetBehavior($this));
+		$this->targetBehaviorPool->setBehavior(0, new HurtByTargetBehavior($this, true));
 		$this->targetBehaviorPool->setBehavior(1, new OwnerHurtByTargetBehavior($this));
 		$this->targetBehaviorPool->setBehavior(2, new OwnerHurtTargetBehavior($this));
+		$this->targetBehaviorPool->setBehavior(3, new NearestAttackableTargetBehavior($this, Skeleton::class, false));
 	}
 
 	protected function initEntity() : void{
@@ -71,6 +76,7 @@ class Wolf extends Tamable{
 		$this->setFollowRange(16);
 
 		$this->propertyManager->setInt(self::DATA_COLOR, 14); // collar color
+		$this->setTamed(false);
 
 		parent::initEntity();
 	}
@@ -83,7 +89,7 @@ class Wolf extends Tamable{
 		if(!$this->isImmobile()){
 			if($this->isTamed()){
 				if($this->getOwningEntityId() == $player->id){
-					$this->setSitting(!$this->isSitting());
+					$this->setSittingFromBehavior(!$this->isSitting());
 					$this->setTargetEntity(null);
 				}
 			}else{
@@ -95,13 +101,12 @@ class Wolf extends Tamable{
 					if(mt_rand(0, 2) == 0){
 						$this->setOwningEntity($player);
 						$this->setTamed();
-						$this->setSitting();
+						$this->setSittingFromBehavior(true);
 						$this->setAngry(false);
-						$this->setAttackDamage(4);
 
-						$this->broadcastEntityEvent(EntityEventPacket::TAME_SUCCESS);
+						$this->broadcastEntityEvent(ActorEventPacket::TAME_SUCCESS);
 					}else{
-						$this->broadcastEntityEvent(EntityEventPacket::TAME_FAIL);
+						$this->broadcastEntityEvent(ActorEventPacket::TAME_FAIL);
 					}
 
 					return true;
@@ -110,6 +115,10 @@ class Wolf extends Tamable{
 		}
 
 		return parent::onInteract($player, $item, $clickPos);
+	}
+
+	public function setSittingFromBehavior(bool $value) : void{
+		$this->behaviorSitting->setSitting($value);
 	}
 
 	public function setTargetEntity(?Entity $target) : void{
@@ -127,5 +136,17 @@ class Wolf extends Tamable{
 
 	public function setAngry(bool $angry = true) : void{
 		$this->setGenericFlag(self::DATA_FLAG_ANGRY, $angry);
+	}
+
+	public function setTamed(bool $tamed = true) : void{
+		parent::setTamed($tamed);
+
+		if($tamed){
+			$this->setMaxHealth(20);
+		}else{
+			$this->setMaxHealth(8);
+		}
+
+		$this->setAttackDamage(4);
 	}
 }

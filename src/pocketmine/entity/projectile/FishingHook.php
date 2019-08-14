@@ -36,10 +36,11 @@ use pocketmine\item\ItemFactory;
 use pocketmine\level\Level;
 use pocketmine\level\particle\GenericParticle;
 use pocketmine\level\particle\Particle;
+use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\RayTraceResult;
 use pocketmine\math\Vector3;
 use pocketmine\nbt\tag\CompoundTag;
-use pocketmine\network\mcpe\protocol\EntityEventPacket;
+use pocketmine\network\mcpe\protocol\ActorEventPacket;
 use pocketmine\Player;
 use function cos;
 use function floor;
@@ -52,8 +53,8 @@ class FishingHook extends Projectile{
 	public const NETWORK_ID = self::FISHING_HOOK;
 
 	/** @var float */
-	public $height = 0.25;
-	public $width = 0.25;
+	public $height = 0.15;
+	public $width = 0.15;
 	protected $gravity = 0.1;
 	protected $drag = 0.05;
 
@@ -128,37 +129,47 @@ class FishingHook extends Projectile{
 		$this->motion->z += $z;
 	}
 
-	/**
-	 * @param int $tickDiff
-	 *
-	 * @return bool
-	 */
-	public function entityBaseTick(int $tickDiff = 1) : bool{
-		$hasUpdate = parent::entityBaseTick($tickDiff);
+	public function onUpdate(int $currentTick) : bool{
+		if($this->closed) return false;
 
 		$owner = $this->getOwningEntity();
+
+		$inGround = $this->level->getBlock($this)->isSolid();
+
+		if($inGround){
+			$this->motion->x *= $this->random->nextFloat() * 0.2;
+			$this->motion->y *= $this->random->nextFloat() * 0.2;
+			$this->motion->z *= $this->random->nextFloat() * 0.2;
+		}
+
+		$hasUpdate = parent::onUpdate($currentTick);
 
 		if($owner instanceof Player){
 			if(!($owner->getInventory()->getItemInHand() instanceof FishingRod) or !$owner->isAlive() or $owner->isClosed() or $owner->distanceSquared($this) > 1024){
 				$this->flagForDespawn();
 			}
 
-			if($this->isUnderwater()){
+			if(!$inGround){
+				$hasUpdate = true;
+
 				$f6 = 0.92;
 
 				if($this->onGround or $this->isCollidedHorizontally){
 					$f6 = 0.5;
 				}
 
-				$j = 5;
 				$d10 = 0;
 
-				for($k = 0; $k < $j; $k++){
-					$b = $this->level->getBlock($this->add(0, $k, 0));
-					if($b instanceof Water){
-						$d10 += 1.0 / $j;
-					}else{
-						break;
+				$bb = $this->getBoundingBox();
+
+				for($j = 0; $j < 5; ++$j){
+					$d1 = $bb->minY + ($bb->maxY - $bb->minY) * $j / 5;
+					$d3 = $bb->minY + ($bb->maxY - $bb->minY) * ($j + 1) / 5;
+
+					$bb2 = new AxisAlignedBB($bb->minX, $d1, $bb->minZ, $bb->maxX, $d3, $bb->maxZ);
+
+					if($this->level->isLiquidInBoundingBox($bb2, new Water())){
+						$d10 += 0.2;
 					}
 				}
 
@@ -178,7 +189,7 @@ class FishingHook extends Projectile{
 						$this->ticksCatchableDelay -= $l;
 
 						if($this->ticksCatchableDelay <= 0){
-							$this->broadcastEntityEvent(EntityEventPacket::FISH_HOOK_HOOK);
+							$this->broadcastEntityEvent(ActorEventPacket::FISH_HOOK_HOOK);
 							$this->motion->y -= 0.2;
 							$this->ticksCatchable = mt_rand(10, 30);
 						}else{
@@ -236,19 +247,19 @@ class FishingHook extends Projectile{
 					if($this->ticksCatchable > 0){
 						$this->motion->y -= ($this->random->nextFloat() * $this->random->nextFloat() * $this->random->nextFloat()) * 0.2;
 					}
-
-					$d11 = $d10 * 2.0 - 1.0;
-					$this->motion->y += 0.03999999910593033 * $d11;
-
-					if($d10 > 0.0){
-						$f6 = $f6 * 0.9;
-						$this->motion->y *= 0.8;
-					}
-
-					$this->motion->x *= $f6;
-					$this->motion->y *= $f6;
-					$this->motion->z *= $f6;
 				}
+
+				$d11 = $d10 * 2.0 - 1.0;
+				$this->motion->y += 0.04 * $d11;
+
+				if($d10 > 0.0){
+					$f6 = $f6 * 0.9;
+					$this->motion->y *= 0.8;
+				}
+
+				$this->motion->x *= $f6;
+				$this->motion->y *= $f6;
+				$this->motion->z *= $f6;
 			}
 		}else{
 			$this->flagForDespawn();
@@ -313,11 +324,7 @@ class FishingHook extends Projectile{
 		}
 	}
 
-	public function applyGravity() : void{
-		if(!$this->isUnderwater()){
-			parent::applyGravity();
-		}else{
-			$this->motion->y += $this->gravity;
-		}
+	protected function tryChangeMovement() : void{
+		// NOOP
 	}
 }

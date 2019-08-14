@@ -36,9 +36,11 @@ use pocketmine\entity\Entity;
 use pocketmine\entity\Human;
 use pocketmine\entity\Living;
 use pocketmine\entity\object\ItemEntity;
+use pocketmine\entity\passive\AbstractHorse;
 use pocketmine\entity\projectile\Arrow;
 use pocketmine\entity\projectile\FishingHook;
 use pocketmine\entity\Skin;
+use pocketmine\entity\vehicle\Boat;
 use pocketmine\event\entity\EntityDamageByEntityEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\event\inventory\InventoryCloseEvent;
@@ -108,13 +110,14 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\DoubleTag;
 use pocketmine\nbt\tag\ListTag;
 use pocketmine\network\mcpe\PlayerNetworkSessionAdapter;
+use pocketmine\network\mcpe\protocol\ActorEventPacket;
 use pocketmine\network\mcpe\protocol\AdventureSettingsPacket;
 use pocketmine\network\mcpe\protocol\AnimatePacket;
+use pocketmine\network\mcpe\protocol\AvailableActorIdentifiersPacket;
 use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
-use pocketmine\network\mcpe\protocol\AvailableEntityIdentifiersPacket;
 use pocketmine\network\mcpe\protocol\BatchPacket;
 use pocketmine\network\mcpe\protocol\BiomeDefinitionListPacket;
-use pocketmine\network\mcpe\protocol\BlockEntityDataPacket;
+use pocketmine\network\mcpe\protocol\BlockActorDataPacket;
 use pocketmine\network\mcpe\protocol\BlockPickRequestPacket;
 use pocketmine\network\mcpe\protocol\BookEditPacket;
 use pocketmine\network\mcpe\protocol\ChangeDimensionPacket;
@@ -123,7 +126,9 @@ use pocketmine\network\mcpe\protocol\CommandRequestPacket;
 use pocketmine\network\mcpe\protocol\ContainerClosePacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\DisconnectPacket;
-use pocketmine\network\mcpe\protocol\EntityEventPacket;
+use pocketmine\network\mcpe\protocol\InteractPacket;
+use pocketmine\network\mcpe\protocol\InventoryTransactionPacket;
+use pocketmine\network\mcpe\protocol\ItemFrameDropItemPacket;
 use pocketmine\network\mcpe\protocol\LevelEventPacket;
 use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 use pocketmine\network\mcpe\protocol\LoginPacket;
@@ -156,9 +161,6 @@ use pocketmine\network\mcpe\protocol\types\DimensionIds;
 use pocketmine\network\mcpe\protocol\types\PlayerPermissions;
 use pocketmine\network\mcpe\protocol\UpdateAttributesPacket;
 use pocketmine\network\mcpe\protocol\UpdateBlockPacket;
-use pocketmine\network\mcpe\protocol\InteractPacket;
-use pocketmine\network\mcpe\protocol\InventoryTransactionPacket;
-use pocketmine\network\mcpe\protocol\ItemFrameDropItemPacket;
 use pocketmine\network\mcpe\VerifyLoginTask;
 use pocketmine\network\SourceInterface;
 use pocketmine\permission\PermissibleBase;
@@ -219,7 +221,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	public const VIEW = Player::SPECTATOR;
 
 	/**
-	 * Checks a supplied username and checks it is valid.
+	 * Validates the given username.
 	 *
 	 * @param string $name
 	 *
@@ -416,7 +418,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	}
 
 	public function isBanned() : bool{
-		return $this->server->getNameBans()->isBanned($this->iusername);
+		return $this->server->getNameBans()->isBanned($this->username);
 	}
 
 	public function setBanned(bool $value){
@@ -429,14 +431,14 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	}
 
 	public function isWhitelisted() : bool{
-		return $this->server->isWhitelisted($this->iusername);
+		return $this->server->isWhitelisted($this->username);
 	}
 
 	public function setWhitelisted(bool $value){
 		if($value){
-			$this->server->addWhitelist($this->iusername);
+			$this->server->addWhitelist($this->username);
 		}else{
-			$this->server->removeWhitelist($this->iusername);
+			$this->server->removeWhitelist($this->username);
 		}
 	}
 
@@ -829,7 +831,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	}
 
 	/**
-	 * Gets the "friendly" name to display of this player to use in the chat.
+	 * Returns the "friendly" display name of this player to use in the chat.
 	 *
 	 * @return string
 	 */
@@ -1132,6 +1134,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			return; //avoid player spawning twice (this can only happen on 3.x with a custom malicious client)
 		}
 		$this->spawned = true;
+		$this->setImmobile(false);
 
 		if($this->hasPermission(Server::BROADCAST_CHANNEL_USERS)){
 			PermissionManager::getInstance()->subscribeToPermission(Server::BROADCAST_CHANNEL_USERS, $this);
@@ -1150,10 +1153,12 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			$this->server->broadcastMessage($ev->getJoinMessage());
 		}
 
-		$this->setImmobile(false);
 		$this->noDamageTicks = 60;
 
-		foreach($this->usedChunks as $index => $c){
+		foreach($this->usedChunks as $index => $hasSent){
+			if(!$hasSent){
+				continue; //this will happen when the chunk is ready to send
+			}
 			Level::getXZ($index, $chunkX, $chunkZ);
 			foreach($this->level->getChunkEntities($chunkX, $chunkZ) as $entity){
 				if($entity !== $this and !$entity->isClosed() and $entity->isAlive() and !$entity->isFlaggedForDespawn()){
@@ -1406,20 +1411,6 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		}else{
 			$this->updateBoundingBox(1.8, 0.6);
 		}
-	}
-
-	/**
-	 * Update player's height and width
-	 *
-	 * @param float $height
-	 * @param float $width
-	 */
-	public function updateBoundingBox(float $height, float $width) : void{
-		$this->height = $height;
-		$this->width = $width;
-		$this->recalculateBoundingBox();
-		$this->propertyManager->setFloat(self::DATA_BOUNDING_BOX_WIDTH, $width);
-		$this->propertyManager->setFloat(self::DATA_BOUNDING_BOX_HEIGHT, $height);
 	}
 
 	/**
@@ -1704,7 +1695,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			 * If you must tamper with this code, be aware that this can cause very nasty results. Do not waste our time
 			 * asking for help if you suffer the consequences of messing with this.
 			 */
-			$this->server->getLogger()->warning($this->getName() . " moved too fast, reverting movement");
+			$this->server->getLogger()->debug($this->getName() . " moved too fast, reverting movement");
 			$this->server->getLogger()->debug("Old position: " . $this->asVector3() . ", new position: " . $this->newPosition);
 			$revert = true;
 		}elseif(!$this->level->isInLoadedTerrain($newPos) or !$this->level->isChunkGenerated($newPos->getFloorX() >> 4, $newPos->getFloorZ() >> 4)){
@@ -2042,7 +2033,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			return true;
 		}
 
-		if(!$this->server->isWhitelisted($this->iusername) and $this->kick("Server is white-listed", false)){
+		if(!$this->server->isWhitelisted($this->username) and $this->kick("Server is white-listed", false)){
 			return true;
 		}
 
@@ -2178,7 +2169,13 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			case ResourcePackClientResponsePacket::STATUS_SEND_PACKS:
 				$manager = $this->server->getResourcePackManager();
 				foreach($packet->packIds as $uuid){
-					$pack = $manager->getPackById(substr($uuid, 0, strpos($uuid, "_"))); //dirty hack for mojang's dirty hack for versions
+					//dirty hack for mojang's dirty hack for versions
+					$splitPos = strpos($uuid, "_");
+					if($splitPos !== false){
+						$uuid = substr($uuid, 0, $splitPos);
+					}
+
+					$pack = $manager->getPackById($uuid);
 					if(!($pack instanceof ResourcePack)){
 						//Client requested a resource pack but we don't have it available on the server
 						$this->close("", "disconnectionScreen.resourcePack", true);
@@ -2271,7 +2268,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$pk->worldName = $this->server->getMotd();
 		$this->dataPacket($pk);
 
-		$this->sendDataPacket(new AvailableEntityIdentifiersPacket());
+		$this->sendDataPacket(new AvailableActorIdentifiersPacket());
 		$this->sendDataPacket(new BiomeDefinitionListPacket());
 
 		$this->level->sendTime($this);
@@ -2393,14 +2390,14 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		return true;
 	}
 
-	public function handleEntityEvent(EntityEventPacket $packet) : bool{
+	public function handleEntityEvent(ActorEventPacket $packet) : bool{
 		if(!$this->spawned or !$this->isAlive()){
 			return true;
 		}
 		$this->doCloseInventory();
 
 		switch($packet->event){
-			case EntityEventPacket::PLAYER_ADD_XP_LEVELS:
+			case ActorEventPacket::PLAYER_ADD_XP_LEVELS:
 				if($packet->data === 0){
 					return false;
 				}
@@ -2414,7 +2411,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				}
 
 				break;
-			case EntityEventPacket::EATING_ITEM:
+			case ActorEventPacket::EATING_ITEM:
 				if($packet->data === 0){
 					return false;
 				}
@@ -2422,7 +2419,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				$this->dataPacket($packet);
 				$this->server->broadcastPacket($this->getViewers(), $packet);
 				break;
-			case EntityEventPacket::COMPLETE_TRADE:
+			case ActorEventPacket::COMPLETE_TRADE:
 				//TODO
 				break;
 			default:
@@ -2879,7 +2876,9 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		switch($packet->action){
 			case InteractPacket::ACTION_OPEN_INVENTORY:
 				if($target instanceof InventoryHolder){
-					$this->addWindow($target->getInventory());
+					if(!($target instanceof AbstractHorse and !$target->isTamed())){
+						$this->addWindow($target->getInventory());
+					}
 				}
 				break;
 			case InteractPacket::ACTION_LEAVE_VEHICLE:
@@ -3035,6 +3034,8 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				}
 				break;
 				break;
+			case PlayerActionPacket::ACTION_INTERACT_BLOCK: //ignored (for now)
+				break;
 			default:
 				$this->server->getLogger()->debug("Unhandled/unknown player action type " . $packet->action . " from " . $this->getName());
 				return false;
@@ -3094,6 +3095,15 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$ev->call();
 		if($ev->isCancelled()){
 			return true;
+		}
+
+		$riding = $this->getRidingEntity();
+		if($riding instanceof Boat){
+			if($packet->action === AnimatePacket::ACTION_ROW_RIGHT){
+				$riding->setPaddleTimeRight($packet->rowingTime);
+			}elseif($packet->action === AnimatePacket::ACTION_ROW_LEFT){
+				$riding->setPaddleTimeLeft($packet->rowingTime);
+			}
 		}
 
 		$pk = new AnimatePacket();
@@ -3197,7 +3207,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		return $handled;
 	}
 
-	public function handleBlockEntityData(BlockEntityDataPacket $packet) : bool{
+	public function handleBlockEntityData(BlockActorDataPacket $packet) : bool{
 		if(!$this->spawned or !$this->isAlive()){
 			return true;
 		}
@@ -3546,7 +3556,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	}
 
 	/**
-	 * Resets the title duration settings.
+	 * Resets the title duration settings to defaults and removes any existing titles.
 	 */
 	public function resetTitles(){
 		$pk = new SetTitlePacket();
@@ -3616,7 +3626,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			$pk->needsTranslation = true;
 			$pk->message = $this->server->getLanguage()->translateString($message, $parameters, "pocketmine.");
 			foreach($parameters as $i => $p){
-				$parameters[$i] = $this->server->getLanguage()->translateString($p, $parameters, "pocketmine.");
+				$parameters[$i] = $this->server->getLanguage()->translateString($p, [], "pocketmine.");
 			}
 			$pk->parameters = $parameters;
 		}else{
@@ -3897,6 +3907,9 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			if($this->cursorInventory !== null){
 				$this->cursorInventory->clearAll();
 			}
+            if($this->offHandInventory !== null){
+                $this->offHandInventory->clearAll();
+            }
 		}
 
 		//TODO: allow this number to be manipulated during PlayerDeathEvent
@@ -3906,7 +3919,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		}
 
 		if($ev->getDeathMessage() != ""){
-			$this->server->broadcast($ev->getDeathMessage(), Server::BROADCAST_CHANNEL_USERS);
+			$this->server->broadcastMessage($ev->getDeathMessage());
 		}
 	}
 
@@ -4003,6 +4016,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		$pk->headYaw = $yaw;
 		$pk->yaw = $yaw;
 		$pk->mode = $mode;
+		$pk->ridingEid = intval($this->ridingEid);
 
 		if($targets !== null){
 			$this->server->broadcastPacket($targets, $pk);

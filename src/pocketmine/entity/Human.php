@@ -47,8 +47,8 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\ListTag;
 use pocketmine\nbt\tag\StringTag;
 use pocketmine\nbt\tag\IntTag;
+use pocketmine\network\mcpe\protocol\ActorEventPacket;
 use pocketmine\network\mcpe\protocol\AddPlayerPacket;
-use pocketmine\network\mcpe\protocol\EntityEventPacket;
 use pocketmine\network\mcpe\protocol\LevelEventPacket;
 use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
 use pocketmine\network\mcpe\protocol\PlayerListPacket;
@@ -61,6 +61,7 @@ use function array_merge;
 use function array_rand;
 use function array_values;
 use function ceil;
+use function in_array;
 use function max;
 use function min;
 use function mt_rand;
@@ -102,18 +103,36 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 	public function __construct(Level $level, CompoundTag $nbt){
 		if($this->skin === null){
 			$skinTag = $nbt->getCompoundTag("Skin");
-			if($skinTag === null or !self::isValidSkin($skinTag->hasTag("Data", ByteArrayTag::class) ?
-				$skinTag->getByteArray("Data") :
-				$skinTag->getString("Data", "")
-			)){
+			if($skinTag === null){
 				throw new \InvalidStateException((new \ReflectionClass($this))->getShortName() . " must have a valid skin set");
 			}
+			$this->skin = self::deserializeSkinNBT($skinTag); //this throws if the skin is invalid
 		}
 
 		parent::__construct($level, $nbt);
 	}
 
 	/**
+	 * @param CompoundTag $skinTag
+	 *
+	 * @return Skin
+	 * @throws \InvalidArgumentException
+	 */
+	protected static function deserializeSkinNBT(CompoundTag $skinTag) : Skin{
+		$skin = new Skin(
+			$skinTag->getString("Name"),
+			$skinTag->hasTag("Data", StringTag::class) ? $skinTag->getString("Data") : $skinTag->getByteArray("Data"), //old data (this used to be saved as a StringTag in older versions of PM)
+			$skinTag->getByteArray("CapeData", ""),
+			$skinTag->getString("GeometryName", ""),
+			$skinTag->getByteArray("GeometryData", "")
+		);
+		$skin->validate();
+		return $skin;
+	}
+
+	/**
+	 * @deprecated
+	 *
 	 * Checks the length of a supplied skin bitmap and returns whether the length is valid.
 	 *
 	 * @param string $skin
@@ -121,7 +140,7 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 	 * @return bool
 	 */
 	public static function isValidSkin(string $skin) : bool{
-		return strlen($skin) === 64 * 64 * 4 or strlen($skin) === 64 * 32 * 4 or strlen($skin) === 128 * 128 * 4;
+		return in_array(strlen($skin), Skin::ACCEPTED_SKIN_SIZES, true);
 	}
 
 	/**
@@ -153,10 +172,7 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 	 * @param Skin $skin
 	 */
 	public function setSkin(Skin $skin) : void{
-		if(!$skin->isValid()){
-			throw new \InvalidStateException("Specified skin is not valid, must be 8KiB or 16KiB");
-		}
-
+		$skin->validate();
 		$this->skin = $skin;
 		$this->skin->debloatGeometryData();
 	}
@@ -200,18 +216,13 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 		$old = $attr->getValue();
 		$attr->setValue($new);
 
-		$reset = false;
 		// ranges: 18-20 (regen), 7-17 (none), 1-6 (no sprint), 0 (health depletion)
 		foreach([17, 6, 0] as $bound){
 			if(($old > $bound) !== ($new > $bound)){
-				$reset = true;
+				$this->foodTickTimer = 0;
 				break;
 			}
 		}
-		if($reset){
-			$this->foodTickTimer = 0;
-		}
-
 	}
 
 	public function getMaxFood() : float{
@@ -646,7 +657,7 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 					//Old hotbar saving stuff, ignore it
 				}elseif($slot >= 100 and $slot < 104){ //Armor
 					$this->armorInventory->setItem($slot - 100, Item::nbtDeserialize($item));
-				}else{
+				}elseif($slot >= 9 and $slot < $this->inventory->getSize() + 9){
 					$this->inventory->setItem($slot - 9, Item::nbtDeserialize($item));
 				}
 			}
@@ -777,7 +788,7 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 			$this->addEffect(new EffectInstance(Effect::getEffect(Effect::FIRE_RESISTANCE), 40 * 20, 1));
 			$this->addEffect(new EffectInstance(Effect::getEffect(Effect::ABSORPTION), 5 * 20, 1));
 
-			$this->broadcastEntityEvent(EntityEventPacket::CONSUME_TOTEM);
+			$this->broadcastEntityEvent(ActorEventPacket::CONSUME_TOTEM);
 			$this->level->broadcastLevelEvent($this->add(0, $this->eyeHeight, 0), LevelEventPacket::EVENT_SOUND_TOTEM);
 
 			$hand = $this->inventory->getItemInHand();
@@ -868,9 +879,7 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 	}
 
 	protected function sendSpawnPacket(Player $player) : void{
-		if(!$this->skin->isValid()){
-			throw new \InvalidStateException((new \ReflectionClass($this))->getShortName() . " must have a valid skin set");
-		}
+		$this->skin->validate();
 
 		if(!($this instanceof Player)){
 			/* we don't use Server->updatePlayerListData() because that uses batches, which could cause race conditions in async compression mode */

@@ -27,7 +27,6 @@ use pocketmine\event\player\PlayerCreationEvent;
 use pocketmine\network\AdvancedSourceInterface;
 use pocketmine\network\mcpe\protocol\BatchPacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
-use pocketmine\network\mcpe\protocol\PacketPool;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\Network;
 use pocketmine\Player;
@@ -41,7 +40,7 @@ use raklib\server\ServerHandler;
 use raklib\server\ServerInstance;
 use raklib\utils\InternetAddress;
 use function addcslashes;
-use function bin2hex;
+use function base64_encode;
 use function get_class;
 use function implode;
 use function rtrim;
@@ -166,12 +165,12 @@ class RakLibInterface implements ServerInstance, AdvancedSourceInterface{
 			$address = $player->getAddress();
 			try{
 				if($packet->buffer !== ""){
-					$pk = PacketPool::getPacket($packet->buffer);
+					$pk = new BatchPacket($packet->buffer);
 					$player->handleDataPacket($pk);
 				}
 			}catch(\Throwable $e){
 				$logger = $this->server->getLogger();
-				$logger->debug("Packet " . (isset($pk) ? get_class($pk) : "unknown") . " 0x" . bin2hex($packet->buffer));
+				$logger->debug("Packet " . (isset($pk) ? get_class($pk) : "unknown") . ": " . base64_encode($packet->buffer));
 				$logger->logException($e);
 
 				$player->close($player->getLeaveMessage(), "Internal server error");

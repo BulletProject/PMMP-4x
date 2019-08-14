@@ -35,7 +35,7 @@ class FloatBehavior extends Behavior{
 	}
 
 	public function canStart() : bool{
-		return $this->mob->isUnderWater();
+		return $this->mob->isInsideOfWater();
 	}
 
 	public function onStart() : void{
@@ -47,10 +47,8 @@ class FloatBehavior extends Behavior{
 	}
 
 	public function onTick() : void{
-		if($this->mob->isUnderWater()){
-			if($this->random->nextFloat() < 0.8){
-				$this->mob->setMotion(new Vector3(0, 0.39, 0));
-			}
+		if($this->random->nextFloat() < 0.8){
+			$this->mob->getJumpHelper()->setJumping(true);
 		}
 	}
 }

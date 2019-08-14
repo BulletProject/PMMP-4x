@@ -32,8 +32,8 @@ use pocketmine\entity\behavior\LookAtPlayerBehavior;
 use pocketmine\entity\behavior\MateBehavior;
 use pocketmine\entity\behavior\PanicBehavior;
 use pocketmine\entity\behavior\RandomLookAroundBehavior;
-use pocketmine\entity\behavior\TemptedBehavior;
-use pocketmine\entity\behavior\WanderBehavior;
+use pocketmine\entity\behavior\TemptBehavior;
+use pocketmine\entity\behavior\RandomStrollBehavior;
 use pocketmine\item\Dye;
 use pocketmine\item\Shears;
 use pocketmine\item\Item;
@@ -42,9 +42,11 @@ use pocketmine\math\Vector3;
 use pocketmine\Player;
 use pocketmine\utils\Color;
 use pocketmine\utils\Random;
+
 use function boolval;
 use function intval;
 use function rand;
+use function var_dump;
 
 class Sheep extends Animal{
 
@@ -57,17 +59,17 @@ class Sheep extends Animal{
 		$this->behaviorPool->setBehavior(0, new FloatBehavior($this));
 		$this->behaviorPool->setBehavior(1, new PanicBehavior($this, 1.25));
 		$this->behaviorPool->setBehavior(2, new MateBehavior($this, 1.0));
-		$this->behaviorPool->setBehavior(3, new TemptedBehavior($this, [Item::WHEAT], 1.1));
+		$this->behaviorPool->setBehavior(3, new TemptBehavior($this, [Item::WHEAT], 1.1));
 		$this->behaviorPool->setBehavior(4, new FollowParentBehavior($this, 1.1));
 		$this->behaviorPool->setBehavior(5, new EatBlockBehavior($this));
-		$this->behaviorPool->setBehavior(6, new WanderBehavior($this, 1.0));
+		$this->behaviorPool->setBehavior(6, new RandomStrollBehavior($this, 1.0));
 		$this->behaviorPool->setBehavior(7, new LookAtPlayerBehavior($this, 6.0));
 		$this->behaviorPool->setBehavior(8, new RandomLookAroundBehavior($this));
 	}
 
 	protected function initEntity() : void{
 		$this->setMaxHealth(8);
-		$this->setMovementSpeed(0.23000000417232513);
+		$this->setMovementSpeed(0.25);
 		$this->setFollowRange(10);
 		$this->propertyManager->setByte(self::DATA_COLOR, $this->namedtag->getByte("Color", $this->getRandomColor($this->level->random)));
 		$this->setSheared(boolval($this->namedtag->getByte("Sheared", 0)));
@@ -142,25 +144,9 @@ class Sheep extends Animal{
 	 */
 	public function getRandomColor(Random $random) : int{
 		$i = $random->nextBoundedInt(100);
-
-		if($i < 5){
-			return Color::COLOR_DYE_BLACK;
-		}elseif($i < 10){
-			return Color::COLOR_DYE_GRAY;
-		}elseif($i < 15){
-			return Color::COLOR_DYE_LIGHT_GRAY;
-		}elseif($i < 18){
-			return Color::COLOR_DYE_BROWN;
-		}elseif($random->nextBoundedInt(500) === 0){
-			return Color::COLOR_DYE_PINK;
-		}else{
-			return Color::COLOR_DYE_WHITE;
-		}
+        return $i < 5 ? Color::COLOR_SHEEP_BLACK : ($i < 10 ? Color::COLOR_SHEEP_GRAY : ($i < 15 ? Color::COLOR_SHEEP_LIGHT_GRAY : ($i < 18 ? Color::COLOR_SHEEP_BROWN : ($random->nextBoundedInt(500) === 0 ? Color::COLOR_SHEEP_PINK : Color::COLOR_SHEEP_WHITE))));
 	}
-
-	/**
-	 * @param Vector3 $pos
-	 */
+	
 	public function eatGrassBonus(Vector3 $pos) : void{
 		if(!$this->isBaby()){
 			if($this->isSheared()){
