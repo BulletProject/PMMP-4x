@@ -57,9 +57,9 @@ class CraftingManager{
 		foreach($recipes as $recipe){
 			switch($recipe["type"]){
 				case "shapeless":
-					if($recipe["block"] !== "crafting_table"){ //TODO: filter others out for now to avoid breaking economics
+				/*	if($recipe["block"] !== "crafting_table"){ //TODO: filter others out for now to avoid breaking economics
 						break;
-					}
+					}*/
 					$this->registerRecipe(new ShapelessRecipe(
 						array_map($itemDeserializerFunc, $recipe["input"]),
 						array_map($itemDeserializerFunc, $recipe["output"])
