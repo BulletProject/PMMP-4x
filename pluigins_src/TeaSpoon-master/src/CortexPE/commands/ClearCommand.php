@@ -52,8 +52,8 @@ class ClearCommand extends VanillaCommand {
 	public function __construct($name){
 		parent::__construct(
 			$name,
-			"Clears your / another player's inventory",
-			"/clear [player]"
+			"指定したプレイヤーのインベントリのアイテムを消します",
+			"/clear [プレイヤー]"
 		);
 		$this->setPermission("pocketmine.command.clear.self;pocketmine.command.clear.other");
 	}
@@ -89,18 +89,18 @@ class ClearCommand extends VanillaCommand {
 					if(count($players) > 0){
 						$player = $players[array_rand($players)];
 					}else{
-						$sender->sendMessage("No players online");
+						$sender->sendMessage("対象のプレイヤーはオフラインです");
 
 						return true;
 					}
 
 					if($player instanceof Player){
-						$sender->sendMessage("Cleared " . $this->clearTarget($player) . " items from " . $player->getName());
+						$sender->sendMessage("" . $player->getName() . " から " . $this->clearTarget($player) . " 個のアイテムをなくしました ") ;
 					}
 
 					return true;
 				case '@e':
-					$sender->sendMessage("Unimplemented since we don't have MobAI yet :/");
+					$sender->sendMessage("§4mobのAIが不十分なため未実装です :/");
 
 					return true;
 				case '@p':
@@ -108,14 +108,14 @@ class ClearCommand extends VanillaCommand {
 					if($player instanceof Player){
 						$this->clearTarget($player);
 					}else{
-						$sender->sendMessage("You must run this command in-game");
+						$sender->sendMessage("コンソールでの実行は不可能です");
 					}
 
 					return true;
 				default;
 					$player = $sender->getServer()->getPlayer($args[0]);
 					if($player instanceof Player){
-						$sender->sendMessage("Cleared " . $this->clearTarget($player) . " items from " . $player->getName());
+						$sender->sendMessage("" . $player->getName() . " から " . $this->clearTarget($player) . " 個のアイテムをなくしました ") ;
 					}else{
 						$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.player.notFound"));
 					}
@@ -131,7 +131,7 @@ class ClearCommand extends VanillaCommand {
 				return true;
 			}
 
-			$sender->sendMessage("Cleared " . $this->clearTarget($sender) . " items from " . $sender->getName());
+			$sender->sendMessage("消去したアイテム数： " . $this->clearTarget($sender) . " 対象のプレイヤー： " . $sender->getName());
 		}else{
 			$sender->sendMessage(new TranslationContainer("commands.generic.usage", [$this->usageMessage]));
 

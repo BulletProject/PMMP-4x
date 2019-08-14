@@ -24,7 +24,7 @@ use pocketmine\nbt\tag\ByteTag;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\network\mcpe\protocol\ActorEventPacket;
 use pocketmine\network\mcpe\protocol\LevelSoundEventPacket;
-use pocketmine\network\mcpe\protocol\SetEntityDataPacket;
+use pocketmine\network\mcpe\protocol\SetActorDataPacket;
 use pocketmine\Player;
 use pocketmine\utils\Random;
 
@@ -54,7 +54,7 @@ class FireworkRocket extends Projectile {
 		if(!is_array($player)){
 			$player = [$player];
 		}
-		$pk = new SetEntityDataPacket();
+		$pk = new SetActorDataPacket();
 		$pk->entityRuntimeId = $this->getId();
 		$pk->metadata = $data ?? $this->getDataPropertyManager()->getDirty();
 		foreach($player as $p){

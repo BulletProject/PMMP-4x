@@ -294,18 +294,6 @@ class Main extends PluginBase {
 		self::$cauldronsEnabled = self::$config->getNested("cauldron.enable", self::$brewingStandsEnabled);
 
 		// Pre-Enable Checks //
-		if(Utils::isPhared()){ // unphared = dev
-			$meta = (new \Phar(\Phar::running(false)))->getMetadata(); // https://github.com/poggit/poggit/blob/beta/src/poggit/ci/builder/ProjectBuilder.php#L227-L236
-			if(!isset($meta["builderName"]) || !is_array($meta)){
-				$this->getLogger()->error("Only use TeaSpoon Builds from Poggit: https://poggit.pmmp.io/ci/CortexPE/TeaSpoon/~");
-				$this->disable = true;
-
-				return;
-			}
-			self::$sixCharCommitHash = substr($meta["fromCommit"], 0, 6);
-		}else{
-			$this->getLogger()->warning("You're using a developer's build of TeaSpoon. For better performance and stability, please get a pre-packaged version here: https://poggit.pmmp.io/ci/CortexPE/TeaSpoon/~");
-		}
 
 		self::$instance = $this;
 	}

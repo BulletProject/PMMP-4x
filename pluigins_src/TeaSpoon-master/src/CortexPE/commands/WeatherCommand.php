@@ -68,19 +68,19 @@ class WeatherCommand extends VanillaCommand {
 			if($args[0] == "get"){
 				switch(Main::$weatherData[$sender->getLevel()->getId()]->getWeather()){
 					case 0:
-						$sender->sendMessage("Weather: Clear");
+						$sender->sendMessage("天気を晴れにします");
 
 						return true;
 					case 1:
-						$sender->sendMessage("Weather: Rainy");
+						$sender->sendMessage("天気を雨にします");
 
 						return true;
 					case 2:
-						$sender->sendMessage("Weather: Rainy Thunder");
+						$sender->sendMessage("天気を雷雨にします");
 
 						return true;
 					case 3:
-						$sender->sendMessage("Weather: Thunder");
+						$sender->sendMessage("天気を雷にします");
 
 						return true;
 				}
@@ -92,11 +92,11 @@ class WeatherCommand extends VanillaCommand {
 			else $duration = (int)$args[1];
 			if($wea >= 0 and $wea <= 3){
 				Main::$weatherData[$sender->getLevel()->getId()]->setWeather($wea, $duration);
-				$sender->sendMessage("Weather Successfully changed on " . $sender->getLevel()->getName());
+				$sender->sendMessage("天気は正常に変更されました " . $sender->getLevel()->getName());
 
 				return true;
 			}else{
-				$sender->sendMessage(TextFormat::RED . "Invalid Weather");
+				$sender->sendMessage(TextFormat::RED . "§c無効な天気");
 
 				return false;
 			}
@@ -110,26 +110,26 @@ class WeatherCommand extends VanillaCommand {
 
 		$level = $sender->getServer()->getLevelByName($args[0]);
 		if(!$level instanceof Level){
-			$sender->sendMessage(TextFormat::RED . "Couldn't find level: " . $args[0]);
+			$sender->sendMessage(TextFormat::RED . "§c指定したレベルは見つかりませんでした: " . $args[0]);
 
 			return false;
 		}
 		if($args[1] == "get"){
 			switch(Main::$weatherData[$level->getId()]->getWeather()){
 				case 0:
-					$sender->sendMessage("Weather: Clear");
+					$sender->sendMessage("天気を晴れにします");
 
 					return true;
 				case 1:
-					$sender->sendMessage("Weather: Rainy");
+					$sender->sendMessage("天気を雷にします");
 
 					return true;
 				case 2:
-					$sender->sendMessage("Weather: Rainy Thunder");
+					$sender->sendMessage("天気を雷雨にします");
 
 					return true;
 				case 3:
-					$sender->sendMessage("Weather: Thunder");
+					$sender->sendMessage("天気を雷にします");
 
 					return true;
 			}
@@ -142,11 +142,11 @@ class WeatherCommand extends VanillaCommand {
 		else $duration = (int)$args[1];
 		if($wea >= 0 and $wea <= 3){
 			Main::$weatherData[$level->getId()]->setWeather($wea, $duration);
-			$sender->sendMessage("Weather Successfully changed on " . $level->getName());
+			$sender->sendMessage("天気は正常に変更されました " . $level->getName());
 
 			return true;
 		}else{
-			$sender->sendMessage(TextFormat::RED . "Invalid Weather");
+			$sender->sendMessage(TextFormat::RED . "§c無効な天気");
 
 			return false;
 		}

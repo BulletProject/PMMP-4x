@@ -87,11 +87,11 @@ class KillCommand extends VanillaCommand {
 								$player->setLastDamageCause($ev);
 								$player->setHealth(0);
 
-								$sender->sendMessage("Killed everybody !");
+								$sender->sendMessage("全プレイヤーをキルしました");
 							}
 						}
 					}else{
-						$sender->sendMessage("No players online");
+						$sender->sendMessage("対象のプレイヤーはオフラインです");
 
 						return true;
 					}
@@ -102,7 +102,7 @@ class KillCommand extends VanillaCommand {
 					if(count($players) > 0){
 						$player = $players[array_rand($players)];
 					}else{
-						$sender->sendMessage("No players online");
+						$sender->sendMessage("対象のプレイヤーはオフラインです");
 
 						return true;
 					}
@@ -117,7 +117,7 @@ class KillCommand extends VanillaCommand {
 						$player->setLastDamageCause($ev);
 						$player->setHealth(0);
 
-						$sender->sendMessage("Killed " . $player->getName());
+						$sender->sendMessage("キルしました 対象のプレイヤー： " . $player->getName());
 					}
 
 					return true;
@@ -160,7 +160,7 @@ class KillCommand extends VanillaCommand {
 							}
 						}
 					}
-					$sender->sendMessage("Killed " . $count . " Entities");
+					$sender->sendMessage("エンティティのキルをしました 数： " . $count . " " );
 
 					return true;
 				case '@p':

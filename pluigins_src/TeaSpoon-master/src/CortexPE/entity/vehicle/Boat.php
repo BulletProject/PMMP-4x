@@ -69,7 +69,7 @@ class Boat extends Vehicle {
 		if(!$source->isCancelled()){
 			$pk = new ActorEventPacket();
 			$pk->entityRuntimeId = $this->id;
-			$pk->event = ActorEventPacket::HURT_ANIMATION;
+			$pk->event = EntityEventPacket::HURT_ANIMATION;
 			PMServer::getInstance()->broadcastPacket($this->getViewers(), $pk);
 		}
 	}

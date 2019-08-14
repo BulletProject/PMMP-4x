@@ -49,7 +49,7 @@ class WorldCommand extends VanillaCommand {
 				$sender->getServer()->loadLevel($args[0]);
 				if(($level = $sender->getServer()->getLevelByName($args[0])) !== null){
 					$sender->teleport($level->getSafeSpawn());
-					$sender->sendMessage("Teleported to Level: " . $level->getName());
+					$sender->sendMessage("指定したレベルにテレポート: " . $level->getName());
 
 					return true;
 				}else{
@@ -62,12 +62,12 @@ class WorldCommand extends VanillaCommand {
 				if(($level = $sender->getServer()->getLevelByName($args[1])) !== null){
 					$player = $sender->getServer()->getPlayer($args[0]);
 					if($player === null){
-						$sender->sendMessage("Player not found.");
+						$sender->sendMessage("§cプレイヤーが見つかりません");
 
 						return false;
 					}
 					$player->teleport($level->getSafeSpawn());
-					$player->sendMessage("Teleported to Level: " . $level->getName());
+					$player->sendMessage("指定したレベルにテレポート: " . $level->getName());
 
 					return true;
 				}else{
@@ -76,12 +76,12 @@ class WorldCommand extends VanillaCommand {
 					return false;
 				}
 			}else{
-				$sender->sendMessage("Usage: /world [target player] <world name>");
+				$sender->sendMessage("Usage: /world [プレイヤー] <World名>");
 
 				return false;
 			}
 		}else{
-			$sender->sendMessage(TextFormat::RED . "This command must be executed as a player");
+			$sender->sendMessage(TextFormat::RED . "コンソールからの実行はできません");
 
 			return false;
 		}
