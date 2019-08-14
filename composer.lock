@@ -235,7 +235,7 @@
             ],
             "description": "A RakNet server implementation written in PHP",
             "support": {
-                "source": "https://github.com/pmmp/RakLib/tree/0.12",
+                "source": "https://github.com/pmmp/RakLib/tree/0.12.5",
                 "issues": "https://github.com/pmmp/RakLib/issues"
             },
             "time": "2019-07-22T14:38:20+00:00"
@@ -302,7 +302,7 @@
             ],
             "description": "Standard library files required by PocketMine-MP and related projects",
             "support": {
-                "source": "https://github.com/pmmp/SPL/tree/master"
+                "source": "https://github.com/pmmp/SPL/tree/0.3.2"
             },
             "time": "2018-08-12T15:17:39+00:00"
         }
