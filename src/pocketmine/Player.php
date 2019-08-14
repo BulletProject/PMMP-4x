@@ -99,10 +99,11 @@ use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\nbt\tag\DoubleTag;
 use pocketmine\nbt\tag\ListTag;
 use pocketmine\network\mcpe\PlayerNetworkSessionAdapter;
+use pocketmine\network\mcpe\protocol\ActorEventPacket;
 use pocketmine\network\mcpe\protocol\AdventureSettingsPacket;
 use pocketmine\network\mcpe\protocol\AnimatePacket;
-use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
 use pocketmine\network\mcpe\protocol\AvailableActorIdentifiersPacket;
+use pocketmine\network\mcpe\protocol\AvailableCommandsPacket;
 use pocketmine\network\mcpe\protocol\BatchPacket;
 use pocketmine\network\mcpe\protocol\BiomeDefinitionListPacket;
 use pocketmine\network\mcpe\protocol\BlockActorDataPacket;
@@ -112,7 +113,6 @@ use pocketmine\network\mcpe\protocol\ChunkRadiusUpdatedPacket;
 use pocketmine\network\mcpe\protocol\ContainerClosePacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\DisconnectPacket;
-use pocketmine\network\mcpe\protocol\ActorEventPacket;
 use pocketmine\network\mcpe\protocol\InteractPacket;
 use pocketmine\network\mcpe\protocol\InventoryTransactionPacket;
 use pocketmine\network\mcpe\protocol\ItemFrameDropItemPacket;
@@ -1596,7 +1596,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			 * If you must tamper with this code, be aware that this can cause very nasty results. Do not waste our time
 			 * asking for help if you suffer the consequences of messing with this.
 			 */
-			$this->server->getLogger()->warning($this->getName() . " moved too fast, reverting movement");
+			$this->server->getLogger()->debug($this->getName() . " moved too fast, reverting movement");
 			$this->server->getLogger()->debug("Old position: " . $this->asVector3() . ", new position: " . $this->newPosition);
 			$revert = true;
 		}elseif(!$this->level->isInLoadedTerrain($newPos) or !$this->level->isChunkGenerated($newPos->getFloorX() >> 4, $newPos->getFloorZ() >> 4)){
@@ -1621,7 +1621,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 				if(!$ev->isCancelled()){
 					$revert = true;
-					$this->server->getLogger()->warning($this->getServer()->getLanguage()->translateString("pocketmine.player.invalidMove", [$this->getName()]));
+					$this->server->getLogger()->debug($this->getServer()->getLanguage()->translateString("pocketmine.player.invalidMove", [$this->getName()]));
 					$this->server->getLogger()->debug("Old position: " . $this->asVector3() . ", new position: " . $this->newPosition);
 				}
 			}
@@ -2855,6 +2855,8 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			case PlayerActionPacket::ACTION_STOP_SWIMMING:
 				//TODO: handle this when it doesn't spam every damn tick (yet another spam bug!!)
 				break;
+			case PlayerActionPacket::ACTION_INTERACT_BLOCK: //ignored (for now)
+				break;
 			default:
 				$this->server->getLogger()->debug("Unhandled/unknown player action type " . $packet->action . " from " . $this->getName());
 				return false;
@@ -3382,7 +3384,7 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 			$pk->needsTranslation = true;
 			$pk->message = $this->server->getLanguage()->translateString($message, $parameters, "pocketmine.");
 			foreach($parameters as $i => $p){
-				$parameters[$i] = $this->server->getLanguage()->translateString($p, $parameters, "pocketmine.");
+				$parameters[$i] = $this->server->getLanguage()->translateString($p, [], "pocketmine.");
 			}
 			$pk->parameters = $parameters;
 		}else{
