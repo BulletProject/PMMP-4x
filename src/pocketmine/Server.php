@@ -361,7 +361,7 @@ class Server{
 		$this->keepInventory = $this->getAltayProperty("player.keep-inventory", false);
 		$this->keepExperience = $this->getAltayProperty("player.keep-experience", false);
 		$this->folderPluginLoader = $this->getAltayProperty("developer.folder-plugin-loader", true);
-		$this->mobAiEnabled = $this->getAltayProperty("level.enable-mob-ai", false);
+		$this->mobAiEnabled = true;
 	}
 
 	/**

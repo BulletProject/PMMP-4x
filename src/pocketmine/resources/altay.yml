@@ -35,6 +35,6 @@ additional-plugin-dirs:
 level:
   # If enabled, mobs can move around
   # Note: this feature can be cause lag in your server when lots of mob are spawned
-  enable-mob-ai: false
+  enable-mob-ai: true
   # Generic Auto Mob Spawning, enable if you want spawn mobs in your world
-  generic-auto-mob-spawning: false
+  generic-auto-mob-spawning: true
