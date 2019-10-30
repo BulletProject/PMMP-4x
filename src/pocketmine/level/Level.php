@@ -540,7 +540,7 @@ class Level implements ChunkManager, Metadatable{
 	 *
 	 * @return bool
 	 */
-	public function doTick($currentTick){
+	public function doTick(int $currentTick){
 
 		//$this->timings->doTick->startTiming();
 

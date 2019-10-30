@@ -39,7 +39,7 @@ class Egg extends Projectile {
 		parent::__construct($chunk, $nbt, $shootingEntity);
 	}
 
-	public function onUpdate($currentTick){
+	public function onUpdate(int $currentTick){
 		if($this->closed){
 			return false;
 		}

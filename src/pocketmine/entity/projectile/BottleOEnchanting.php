@@ -39,7 +39,7 @@ class BottleOEnchanting extends Projectile{
 
 	protected $givenOutXp = false;
 
-	public function onUpdate($currentTick){
+	public function onUpdate(int $currentTick){
 		if($this->closed){
 			return false;
 		}

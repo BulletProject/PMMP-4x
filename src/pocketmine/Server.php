@@ -2345,7 +2345,7 @@ class Server{
 		$this->identifiers[spl_object_hash($player)] = $identifier;
 	}
 
-	private function checkTickUpdates($currentTick){
+	private function checkTickUpdates(int $currentTick){
 
 		//Do level ticks
 		foreach($this->getLevels() as $level){

@@ -71,7 +71,7 @@ class ExperienceOrb extends Entity {
 		return false;
 	}
 
-	public function onUpdate($currentTick) {
+	public function onUpdate(int $currentTick) {
 		if ($this->closed) {
 			return false;
 		}

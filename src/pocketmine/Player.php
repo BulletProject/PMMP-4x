@@ -1420,7 +1420,7 @@ class Player extends Human implements CommandSender, InventoryHolder, IPlayer {
 		return false;
 	}
 
-	public function onUpdate($currentTick){
+	public function onUpdate(int $currentTick){
 		if(!$this->loggedIn){
 			return false;
 		}

@@ -81,7 +81,7 @@ abstract class Projectile extends Entity {
 		$this->namedtag->Age = new ShortTag("Age", $this->age);
 	}
 
-	public function onUpdate($currentTick) {
+	public function onUpdate(int $currentTick) {
 		if ($this->closed) {
 			return false;
 		}

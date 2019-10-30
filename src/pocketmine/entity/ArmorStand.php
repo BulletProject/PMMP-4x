@@ -82,7 +82,7 @@ class ArmorStand extends Entity {
 		return false;
 	}
 	
-	public function onUpdate($currentTick) {
+	public function onUpdate(int $currentTick) {
 		return !$this->closed;
 	}
 	

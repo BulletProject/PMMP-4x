@@ -78,7 +78,7 @@ class Squid extends WaterAnimal implements Ageable{
 	}
 
 
-	public function onUpdate($currentTick){
+	public function onUpdate(int $currentTick){
 	}
 
 

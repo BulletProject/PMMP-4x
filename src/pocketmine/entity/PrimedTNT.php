@@ -68,7 +68,7 @@ class PrimedTNT extends Entity implements Explosive {
 		$this->namedtag->Fuse = new ByteTag("Fuse", $this->fuse);
 	}
 
-	public function onUpdate($currentTick) {
+	public function onUpdate(int $currentTick) {
 		if ($this->closed) {
 			return false;
 		}

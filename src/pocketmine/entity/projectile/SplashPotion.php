@@ -59,7 +59,7 @@ class SplashPotion extends Projectile
         return $this->getDataProperty(self::DATA_POTION_AUX_VALUE) ?? 0;
     }
 
-    public function onUpdate($currentTick)
+    public function onUpdate(int $currentTick)
     {
         if ($this->closed) {
             return false;

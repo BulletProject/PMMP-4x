@@ -34,7 +34,7 @@ class Spider extends WalkingMonster{
 		return "Spider";
 	}
 
-	public function onUpdate($currentTick){
+	public function onUpdate(int $currentTick){
 		if($this->server->getDifficulty() < 1){
 			$this->close();
 			return false;

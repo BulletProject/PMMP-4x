@@ -68,7 +68,7 @@ class FishingHook extends Projectile{
 		return $this->data;
 	}
 
-	public function onUpdate($currentTick){
+	public function onUpdate(int $currentTick){
 		if($this->closed){
 			return false;
 		}

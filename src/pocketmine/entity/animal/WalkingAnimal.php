@@ -51,7 +51,7 @@ abstract class WalkingAnimal extends WalkingEntity implements Animal{
 		return $hasUpdate;
 	}
 
-	public function onUpdate($currentTick){
+	public function onUpdate(int $currentTick){
 		if(!$this->isAlive()){
 			if(++$this->deadTicks >= 23){
 				$this->close();

@@ -147,7 +147,7 @@ class TaskHandler{
 	/**
 	 * @param int $currentTick
 	 */
-	public function run($currentTick){
+	public function run(int $currentTick){
 		$this->task->onRun($currentTick);
 	}
 

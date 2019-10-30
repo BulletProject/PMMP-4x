@@ -945,7 +945,7 @@ abstract class Entity extends Location implements Metadatable{
 		return new Vector3($x, $y, $z);
 	}
 
-	public function onUpdate($currentTick){
+	public function onUpdate(int $currentTick){
 		if($this->closed){
 			return false;
 		}

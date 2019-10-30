@@ -45,7 +45,7 @@ class Arrow extends Projectile {
 		$this->setCritical($critical);
 	}
 
-	public function onUpdate($currentTick) {
+	public function onUpdate(int $currentTick) {
 		if ($this->closed) {
 			return false;
 		}

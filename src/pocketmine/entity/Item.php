@@ -105,7 +105,7 @@ class Item extends Entity{
 		}
 	}
 
-	public function onUpdate($currentTick){
+	public function onUpdate(int $currentTick){
 		if($this->closed){
 			return false;
 		}

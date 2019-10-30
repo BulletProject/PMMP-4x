@@ -95,7 +95,7 @@ class Painting extends Entity {
 	public function setHealth($amount) {
 	}
 	
-	public function onUpdate($currentTick) {
+	public function onUpdate(int $currentTick) {
 		return false;
 	}
 

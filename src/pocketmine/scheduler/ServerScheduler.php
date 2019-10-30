@@ -224,7 +224,7 @@ class ServerScheduler{
 	/**
 	 * @param int $currentTick
 	 */
-	public function mainThreadHeartbeat($currentTick){
+	public function mainThreadHeartbeat(int $currentTick){
 		$this->currentTick = $currentTick;
 		while($this->isReady($this->currentTick)){
 			/** @var TaskHandler $task */
@@ -254,7 +254,7 @@ class ServerScheduler{
 		$this->asyncPool->collectTasks();
 	}
 
-	private function isReady($currentTicks){
+	private function isReady(int $currentTicks){
 		return count($this->tasks) > 0 and $this->queue->current()->getNextRun() <= $currentTicks;
 	}
 
