@@ -211,7 +211,7 @@ class PluginManager{
 								$this->server->getLogger()->error("Could not load duplicate plugin '" . $name . "': plugin exists");
 								continue;
 							}
-							
+
 							$plugins[$name] = $file;
 
 							$softDependencies[$name] = (array) $description->getSoftDepend();
