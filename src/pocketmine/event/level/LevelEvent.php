@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 /**
  * Level related events
@@ -30,7 +28,7 @@ use pocketmine\event\Event;
 use pocketmine\level\Level;
 
 abstract class LevelEvent extends Event{
-	/** @var Level */
+	/** @var \pocketmine\level\Level */
 	private $level;
 
 	/**
@@ -41,9 +39,9 @@ abstract class LevelEvent extends Event{
 	}
 
 	/**
-	 * @return Level
+	 * @return \pocketmine\level\Level
 	 */
-	public function getLevel() : Level{
+	public function getLevel(){
 		return $this->level;
 	}
 }

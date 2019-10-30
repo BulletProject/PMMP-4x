@@ -19,20 +19,10 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\permission;
 
 use pocketmine\Server;
 use pocketmine\utils\MainLogger;
-use function fclose;
-use function fgets;
-use function fopen;
-use function fwrite;
-use function is_resource;
-use function strftime;
-use function strtolower;
-use function time;
 
 class BanList{
 
@@ -48,39 +38,28 @@ class BanList{
 	/**
 	 * @param string $file
 	 */
-	public function __construct(string $file){
+	public function __construct($file){
 		$this->file = $file;
 	}
 
 	/**
 	 * @return bool
 	 */
-	public function isEnabled() : bool{
-		return $this->enabled;
+	public function isEnabled(){
+		return $this->enabled === true;
 	}
 
 	/**
 	 * @param bool $flag
 	 */
-	public function setEnabled(bool $flag){
-		$this->enabled = $flag;
-	}
-
-	/**
-	 * @param string $name
-	 *
-	 * @return BanEntry|null
-	 */
-	public function getEntry(string $name) : ?BanEntry{
-		$this->removeExpired();
-
-		return $this->list[strtolower($name)] ?? null;
+	public function setEnabled($flag){
+		$this->enabled = (bool) $flag;
 	}
 
 	/**
 	 * @return BanEntry[]
 	 */
-	public function getEntries() : array{
+	public function getEntries(){
 		$this->removeExpired();
 
 		return $this->list;
@@ -91,7 +70,7 @@ class BanList{
 	 *
 	 * @return bool
 	 */
-	public function isBanned(string $name) : bool{
+	public function isBanned($name){
 		$name = strtolower($name);
 		if(!$this->isEnabled()){
 			return false;
@@ -118,11 +97,11 @@ class BanList{
 	 *
 	 * @return BanEntry
 	 */
-	public function addBan(string $target, string $reason = null, \DateTime $expires = null, string $source = null) : BanEntry{
+	public function addBan($target, $reason = null, $expires = null, $source = null){
 		$entry = new BanEntry($target);
-		$entry->setSource($source ?? $entry->getSource());
+		$entry->setSource($source != null ? $source : $entry->getSource());
 		$entry->setExpires($expires);
-		$entry->setReason($reason ?? $entry->getReason());
+		$entry->setReason($reason != null ? $reason : $entry->getReason());
 
 		$this->list[$entry->getName()] = $entry;
 		$this->save();
@@ -133,7 +112,7 @@ class BanList{
 	/**
 	 * @param string $name
 	 */
-	public function remove(string $name){
+	public function remove($name){
 		$name = strtolower($name);
 		if(isset($this->list[$name])){
 			unset($this->list[$name]);
@@ -154,16 +133,10 @@ class BanList{
 		$fp = @fopen($this->file, "r");
 		if(is_resource($fp)){
 			while(($line = fgets($fp)) !== false){
-				if($line[0] !== "#"){
-					try{
-						$entry = BanEntry::fromString($line);
-						if($entry instanceof BanEntry){
-							$this->list[$entry->getName()] = $entry;
-						}
-					}catch(\Throwable $e){
-						$logger = MainLogger::getLogger();
-						$logger->critical("Failed to parse ban entry from string \"$line\": " . $e->getMessage());
-						$logger->logException($e);
+				if($line{0} !== "#"){
+					$entry = BanEntry::fromString($line);
+					if($entry instanceof BanEntry){
+						$this->list[$entry->getName()] = $entry;
 					}
 				}
 			}
@@ -173,14 +146,11 @@ class BanList{
 		}
 	}
 
-	/**
-	 * @param bool $writeHeader
-	 */
-	public function save(bool $writeHeader = true){
+	public function save($flag = true){
 		$this->removeExpired();
 		$fp = @fopen($this->file, "w");
 		if(is_resource($fp)){
-			if($writeHeader){
+			if($flag === true){
 				fwrite($fp, "# Updated " . strftime("%x %H:%M", time()) . " by " . Server::getInstance()->getName() . " " . Server::getInstance()->getPocketMineVersion() . "\n");
 				fwrite($fp, "# victim name | ban date | banned by | banned until | reason\n\n");
 			}
@@ -193,4 +163,5 @@ class BanList{
 			MainLogger::getLogger()->error("Could not save ban list");
 		}
 	}
+
 }

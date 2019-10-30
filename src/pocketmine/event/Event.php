@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,35 +15,35 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
-
-declare(strict_types=1);
 
 /**
  * Event related classes
  */
 namespace pocketmine\event;
 
-use function assert;
-use function get_class;
-
 abstract class Event{
-	private const MAX_EVENT_CALL_DEPTH = 50;
-	/** @var int */
-	private static $eventCallDepth = 1;
 
-	/** @var string|null */
+	/**
+	 * Any callable event must declare the static variable
+	 *
+	 * public static $handlerList = null;
+	 * public static $eventPool = [];
+	 * public static $nextEvent = 0;
+	 *
+	 * Not doing so will deny the proper event initialization
+	 */
+
 	protected $eventName = null;
-	/** @var bool */
 	private $isCancelled = false;
 
 	/**
 	 * @return string
 	 */
-	final public function getEventName() : string{
-		return $this->eventName ?? get_class($this);
+	final public function getEventName(){
+		return $this->eventName === null ? get_class($this) : $this->eventName;
 	}
 
 	/**
@@ -51,59 +51,40 @@ abstract class Event{
 	 *
 	 * @throws \BadMethodCallException
 	 */
-	public function isCancelled() : bool{
+	public function isCancelled(){
 		if(!($this instanceof Cancellable)){
-			throw new \BadMethodCallException(get_class($this) . " is not Cancellable");
+			throw new \BadMethodCallException("Event is not Cancellable");
 		}
 
 		/** @var Event $this */
-		return $this->isCancelled;
+		return $this->isCancelled === true;
 	}
 
 	/**
 	 * @param bool $value
 	 *
+	 * @return bool
+	 *
 	 * @throws \BadMethodCallException
 	 */
-	public function setCancelled(bool $value = true) : void{
+	public function setCancelled($value = true){
 		if(!($this instanceof Cancellable)){
-			throw new \BadMethodCallException(get_class($this) . " is not Cancellable");
+			throw new \BadMethodCallException("Event is not Cancellable");
 		}
 
 		/** @var Event $this */
-		$this->isCancelled = $value;
+		$this->isCancelled = (bool) $value;
 	}
 
 	/**
-	 * Calls event handlers registered for this event.
-	 *
-	 * @throws \RuntimeException if event call recursion reaches the max depth limit
-	 *
-	 * @throws \ReflectionException
+	 * @return HandlerList
 	 */
-	public function call() : void{
-		if(self::$eventCallDepth >= self::MAX_EVENT_CALL_DEPTH){
-			//this exception will be caught by the parent event call if all else fails
-			throw new \RuntimeException("Recursive event call detected (reached max depth of " . self::MAX_EVENT_CALL_DEPTH . " calls)");
+	public function getHandlers(){
+		if(static::$handlerList === null){
+			static::$handlerList = new HandlerList();
 		}
 
-		$handlerList = HandlerList::getHandlerListFor(get_class($this));
-		assert($handlerList !== null, "Called event should have a valid HandlerList");
-
-		++self::$eventCallDepth;
-		try{
-			foreach(EventPriority::ALL as $priority){
-				$currentList = $handlerList;
-				while($currentList !== null){
-					foreach($currentList->getListenersByPriority($priority) as $registration){
-						$registration->callEvent($this);
-					}
-
-					$currentList = $currentList->getParent();
-				}
-			}
-		}finally{
-			--self::$eventCallDepth;
-		}
+		return static::$handlerList;
 	}
+
 }

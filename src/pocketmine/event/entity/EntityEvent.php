@@ -14,28 +14,22 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 /**
  * Entity related Events, like spawn, inventory, attack...
  */
 namespace pocketmine\event\entity;
 
-use pocketmine\entity\Entity;
 use pocketmine\event\Event;
 
 abstract class EntityEvent extends Event{
-	/** @var Entity */
+	/** @var \pocketmine\entity\Entity */
 	protected $entity;
 
-	/**
-	 * @return Entity
-	 */
 	public function getEntity(){
 		return $this->entity;
 	}

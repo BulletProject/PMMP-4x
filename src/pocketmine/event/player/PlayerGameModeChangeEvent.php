@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\player;
 
@@ -30,15 +28,18 @@ use pocketmine\Player;
  * Called when a player has its gamemode changed
  */
 class PlayerGameModeChangeEvent extends PlayerEvent implements Cancellable{
+	public static $handlerList = null;
+
 	/** @var int */
 	protected $gamemode;
 
-	public function __construct(Player $player, int $newGamemode){
+	public function __construct(Player $player, $newGamemode){
 		$this->player = $player;
-		$this->gamemode = $newGamemode;
+		$this->gamemode = (int) $newGamemode;
 	}
 
-	public function getNewGamemode() : int{
+	public function getNewGamemode(){
 		return $this->gamemode;
 	}
+
 }

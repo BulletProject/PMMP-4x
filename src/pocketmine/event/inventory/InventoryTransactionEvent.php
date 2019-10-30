@@ -1,6 +1,6 @@
 <?php
 
-/*
+/**
  *
  *  ____            _        _   __  __ _                  __  __ ____
  * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
@@ -14,38 +14,39 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\inventory;
 
 use pocketmine\event\Cancellable;
 use pocketmine\event\Event;
-use pocketmine\inventory\transaction\InventoryTransaction;
+use pocketmine\inventory\TransactionGroup;
 
 /**
  * Called when there is a transaction between two Inventory objects.
  * The source of this can be a Player, entities, mobs, or even hoppers in the future!
  */
 class InventoryTransactionEvent extends Event implements Cancellable{
-	/** @var InventoryTransaction */
-	private $transaction;
+	public static $handlerList = null;
+
+	/** @var TransactionGroup */
+	private $ts;
 
 	/**
-	 * @param InventoryTransaction $transaction
+	 * @param TransactionGroup $ts
 	 */
-	public function __construct(InventoryTransaction $transaction){
-		$this->transaction = $transaction;
+	public function __construct(TransactionGroup $ts){
+		$this->ts = $ts;
 	}
 
 	/**
-	 * @return InventoryTransaction
+	 * @return TransactionGroup
 	 */
-	public function getTransaction() : InventoryTransaction{
-		return $this->transaction;
+	public function getTransaction(){
+		return $this->ts;
 	}
+
 }

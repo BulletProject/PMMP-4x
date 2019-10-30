@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\player;
 
@@ -27,11 +25,15 @@ use pocketmine\level\Position;
 use pocketmine\Player;
 
 /**
- * Called when a player is respawned
+ * Called when a player is respawned (or first time spawned)
  */
 class PlayerRespawnEvent extends PlayerEvent{
+	public static $handlerList = null;
+
 	/** @var Position */
 	protected $position;
+	protected $yaw;
+	protected $pitch;
 
 	/**
 	 * @param Player   $player
@@ -45,14 +47,31 @@ class PlayerRespawnEvent extends PlayerEvent{
 	/**
 	 * @return Position
 	 */
-	public function getRespawnPosition() : Position{
+	public function getRespawnPosition(){
 		return $this->position;
 	}
 
 	/**
 	 * @param Position $position
 	 */
-	public function setRespawnPosition(Position $position) : void{
+	public function setRespawnPosition(Position $position){
 		$this->position = $position;
 	}
+	
+	public function getYaw() {
+		return $this->yaw;
+	}
+	
+	public function setYaw($yaw) {
+		$this->yaw = $yaw;
+	}
+	
+	public function getPitch() {
+		return $this->pitch;
+	}
+	
+	public function setPitch($pitch) {
+		$this->pitch = $pitch;
+	}
+	
 }

@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,79 +15,91 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
-
-declare(strict_types=1);
 
 namespace pocketmine\block;
 
 use pocketmine\item\Item;
-use pocketmine\math\AxisAlignedBB;
-use pocketmine\math\Vector3;
+use pocketmine\item\Tool;
+use pocketmine\level\Level;
 use pocketmine\Player;
-use pocketmine\tile\Sign as TileSign;
-use pocketmine\tile\Tile;
-use function floor;
 
 class SignPost extends Transparent{
 
 	protected $id = self::SIGN_POST;
 
-	protected $itemId = Item::SIGN;
-
-	public function __construct(int $meta = 0){
+	public function __construct($meta = 0){
 		$this->meta = $meta;
 	}
 
-	public function getHardness() : float{
+	public function getHardness(){
 		return 1;
 	}
 
-	public function isSolid() : bool{
+	public function isSolid(){
 		return false;
 	}
 
-	public function getName() : string{
+	public function getName(){
 		return "Sign Post";
 	}
 
-	protected function recalculateBoundingBox() : ?AxisAlignedBB{
+	public function getBoundingBox(){
 		return null;
 	}
 
 
-	public function place(Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, Player $player = null) : bool{
-		if($face !== Vector3::SIDE_DOWN){
+	public function place(Item $item, Block $block, Block $target, $face, $fx, $fy, $fz, Player $player = null){
+		if($face !== 0){
+			$faces = [
+				2 => 2,
+				3 => 3,
+				4 => 4,
+				5 => 5,
+			];
+			if(!isset($faces[$face])){
+				$this->meta = floor((($player->yaw + 180) * 16 / 360) + 0.5) & 0x0F;
+				$this->getLevel()->setBlock($block, Block::get(Item::SIGN_POST, $this->meta), true);
 
-			if($face === Vector3::SIDE_UP){
-				$this->meta = $player !== null ? (floor((($player->yaw + 180) * 16 / 360) + 0.5) & 0x0f) : 0;
-				$this->getLevel()->setBlock($blockReplace, $this, true);
+				return true;
 			}else{
-				$this->meta = $face;
-				$this->getLevel()->setBlock($blockReplace, BlockFactory::get(Block::WALL_SIGN, $this->meta), true);
+				$this->meta = $faces[$face];
+				$this->getLevel()->setBlock($block, Block::get(Item::WALL_SIGN, $this->meta), true);
+
+				return true;
 			}
-
-			Tile::createTile(Tile::SIGN, $this->getLevel(), TileSign::createNBT($this, $face, $item, $player));
-
-			return true;
 		}
 
 		return false;
 	}
 
-	public function onNearbyBlockChange() : void{
-		if($this->getSide(Vector3::SIDE_DOWN)->getId() === self::AIR){
-			$this->getLevel()->useBreakOn($this);
+	public function onUpdate($type){
+		if($type === Level::BLOCK_UPDATE_NORMAL){
+			if($this->getSide(0)->getId() === self::AIR){
+				$this->getLevel()->useBreakOn($this);
+
+				return Level::BLOCK_UPDATE_NORMAL;
+			}
 		}
+
+		return false;
 	}
 
-	public function getToolType() : int{
-		return BlockToolType::TYPE_AXE;
+	public function onBreak(Item $item){
+		$this->getLevel()->setBlock($this, new Air(), true, true, true);
+
+		return true;
 	}
 
-	public function getVariantBitmask() : int{
-		return 0;
+	public function getDrops(Item $item){
+		return [
+			[Item::SIGN, 0, 1],
+		];
+	}
+
+	public function getToolType(){
+		return Tool::TYPE_AXE;
 	}
 }

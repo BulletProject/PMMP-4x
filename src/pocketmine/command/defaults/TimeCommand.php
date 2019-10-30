@@ -19,86 +19,75 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\InvalidCommandSyntaxException;
-use pocketmine\lang\TranslationContainer;
 use pocketmine\level\Level;
-use pocketmine\Player;
 use pocketmine\utils\TextFormat;
-use function count;
 
 class TimeCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.time.description",
-			"%pocketmine.command.time.usage"
+			"Changes the time on each world",
+			"/time set <value>\n/time add <value>\n/time start|stop"
 		);
 		$this->setPermission("pocketmine.command.time.add;pocketmine.command.time.set;pocketmine.command.time.start;pocketmine.command.time.stop");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(count($args) < 1){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
+
+			return false;
 		}
 
 		if($args[0] === "start"){
 			if(!$sender->hasPermission("pocketmine.command.time.start")){
-				$sender->sendMessage($sender->getServer()->getLanguage()->translateString(TextFormat::RED . "%commands.generic.permission"));
+				$sender->sendMessage(TextFormat::RED . "You don't have permission to restart the time");
 
 				return true;
 			}
 			foreach($sender->getServer()->getLevels() as $level){
+				$level->checkTime();
 				$level->startTime();
+				$level->checkTime();
 			}
 			Command::broadcastCommandMessage($sender, "Restarted the time");
 			return true;
 		}elseif($args[0] === "stop"){
 			if(!$sender->hasPermission("pocketmine.command.time.stop")){
-				$sender->sendMessage($sender->getServer()->getLanguage()->translateString(TextFormat::RED . "%commands.generic.permission"));
+				$sender->sendMessage(TextFormat::RED . "You don't have permission to stop the time");
 
 				return true;
 			}
 			foreach($sender->getServer()->getLevels() as $level){
+				$level->checkTime();
 				$level->stopTime();
+				$level->checkTime();
 			}
 			Command::broadcastCommandMessage($sender, "Stopped the time");
-			return true;
-		}elseif($args[0] === "query"){
-			if(!$sender->hasPermission("pocketmine.command.time.query")){
-				$sender->sendMessage($sender->getServer()->getLanguage()->translateString(TextFormat::RED . "%commands.generic.permission"));
-
-				return true;
-			}
-			if($sender instanceof Player){
-				$level = $sender->getLevel();
-			}else{
-				$level = $sender->getServer()->getDefaultLevel();
-			}
-			$sender->sendMessage($sender->getServer()->getLanguage()->translateString("commands.time.query", [$level->getTime()]));
 			return true;
 		}
 
 
 		if(count($args) < 2){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
+
+			return false;
 		}
 
 		if($args[0] === "set"){
 			if(!$sender->hasPermission("pocketmine.command.time.set")){
-				$sender->sendMessage($sender->getServer()->getLanguage()->translateString(TextFormat::RED . "%commands.generic.permission"));
+				$sender->sendMessage(TextFormat::RED . "You don't have permission to set the time");
 
 				return true;
 			}
 
 			if($args[1] === "day"){
-				$value = Level::TIME_DAY;
+				$value = 0;
 			}elseif($args[1] === "night"){
 				$value = Level::TIME_NIGHT;
 			}else{
@@ -106,23 +95,27 @@ class TimeCommand extends VanillaCommand{
 			}
 
 			foreach($sender->getServer()->getLevels() as $level){
+				$level->checkTime();
 				$level->setTime($value);
+				$level->checkTime();
 			}
-			Command::broadcastCommandMessage($sender, new TranslationContainer("commands.time.set", [$value]));
+			Command::broadcastCommandMessage($sender, "Set time to " . $value);
 		}elseif($args[0] === "add"){
 			if(!$sender->hasPermission("pocketmine.command.time.add")){
-				$sender->sendMessage($sender->getServer()->getLanguage()->translateString(TextFormat::RED . "%commands.generic.permission"));
+				$sender->sendMessage(TextFormat::RED . "You don't have permission to add the time");
 
 				return true;
 			}
 
 			$value = $this->getInteger($sender, $args[1], 0);
 			foreach($sender->getServer()->getLevels() as $level){
+				$level->checkTime();
 				$level->setTime($level->getTime() + $value);
+				$level->checkTime();
 			}
-			Command::broadcastCommandMessage($sender, new TranslationContainer("commands.time.added", [$value]));
+			Command::broadcastCommandMessage($sender, "Added " . $value . " to time");
 		}else{
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
 		}
 
 		return true;

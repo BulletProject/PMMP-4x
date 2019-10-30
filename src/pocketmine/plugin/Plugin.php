@@ -19,25 +19,19 @@
  *
 */
 
-declare(strict_types=1);
-
 /**
  * Plugin related classes
  */
 namespace pocketmine\plugin;
 
 use pocketmine\command\CommandExecutor;
-use pocketmine\scheduler\TaskScheduler;
-use pocketmine\Server;
-use pocketmine\utils\Config;
 
 
 /**
  * It is recommended to use PluginBase for the actual plugin
+ *
  */
 interface Plugin extends CommandExecutor{
-
-	public function __construct(PluginLoader $loader, Server $server, PluginDescription $description, string $dataFolder, string $file);
 
 	/**
 	 * Called when the plugin is loaded, before calling onEnable()
@@ -49,21 +43,7 @@ interface Plugin extends CommandExecutor{
 	 */
 	public function onEnable();
 
-	/**
-	 * @return bool
-	 */
-	public function isEnabled() : bool;
-
-	/**
-	 * Called by the plugin manager when the plugin is enabled or disabled to inform the plugin of its enabled state.
-	 *
-	 * @internal This is intended for core use only and should not be used by plugins
-	 * @see PluginManager::enablePlugin()
-	 * @see PluginManager::disablePlugin()
-	 *
-	 * @param bool $enabled
-	 */
-	public function setEnabled(bool $enabled = true) : void;
+	public function isEnabled();
 
 	/**
 	 * Called when the plugin is disabled
@@ -71,87 +51,72 @@ interface Plugin extends CommandExecutor{
 	 */
 	public function onDisable();
 
-	/**
-	 * @return bool
-	 */
-	public function isDisabled() : bool;
+	public function isDisabled();
 
 	/**
-	 * Gets the plugin's data folder to save files and configuration.
-	 * This directory name has a trailing slash.
-	 *
-	 * @return string
+	 * Gets the plugin's data folder to save files and configuration
 	 */
-	public function getDataFolder() : string;
+	public function getDataFolder();
 
 	/**
 	 * @return PluginDescription
 	 */
-	public function getDescription() : PluginDescription;
+	public function getDescription();
 
 	/**
 	 * Gets an embedded resource in the plugin file.
 	 *
 	 * @param string $filename
-	 *
-	 * @return null|resource Resource data, or null
 	 */
-	public function getResource(string $filename);
+	public function getResource($filename);
 
 	/**
 	 * Saves an embedded resource to its relative location in the data folder
 	 *
 	 * @param string $filename
 	 * @param bool   $replace
-	 *
-	 * @return bool
 	 */
-	public function saveResource(string $filename, bool $replace = false) : bool;
+	public function saveResource($filename, $replace = false);
 
 	/**
-	 * Returns all the resources packaged with the plugin
-	 *
-	 * @return \SplFileInfo[]
+	 * Returns all the resources incrusted in the plugin
 	 */
-	public function getResources() : array;
+	public function getResources();
 
 	/**
-	 * @return Config
+	 * @return \pocketmine\utils\Config
 	 */
-	public function getConfig() : Config;
+	public function getConfig();
 
 	public function saveConfig();
 
-	/**
-	 * @return bool
-	 */
-	public function saveDefaultConfig() : bool;
+	public function saveDefaultConfig();
 
 	public function reloadConfig();
 
 	/**
-	 * @return Server
+	 * @return \pocketmine\Server
 	 */
-	public function getServer() : Server;
+	public function getServer();
 
-	/**
-	 * @return string
-	 */
-	public function getName() : string;
+	public function getName();
 
 	/**
 	 * @return PluginLogger
 	 */
-	public function getLogger() : PluginLogger;
+	public function getLogger();
 
 	/**
 	 * @return PluginLoader
 	 */
 	public function getPluginLoader();
-
+	
 	/**
-	 * @return TaskScheduler
+	 * @return array
 	 */
-	public function getScheduler() : TaskScheduler;
+	public function getJsonCommands();
 
+    public function setJsonCommands($commands);
+	
+    public function generateJsonCommands($pluginCmds);
 }

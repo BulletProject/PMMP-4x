@@ -19,37 +19,34 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\InvalidCommandSyntaxException;
-use pocketmine\lang\TranslationContainer;
 use pocketmine\Player;
 use pocketmine\Server;
 use pocketmine\utils\TextFormat;
-use function count;
 
 class GamemodeCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.gamemode.description",
-			"%commands.gamemode.usage"
+			"Changes the player to a specific game mode",
+			"/gamemode <mode> [player]"
 		);
 		$this->setPermission("pocketmine.command.gamemode");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(!$this->testPermission($sender)){
 			return true;
 		}
 
 		if(count($args) === 0){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
+
+			return false;
 		}
 
 		$gameMode = Server::getGamemodeFromString($args[0]);
@@ -64,24 +61,31 @@ class GamemodeCommand extends VanillaCommand{
 		if(isset($args[1])){
 			$target = $sender->getServer()->getPlayer($args[1]);
 			if($target === null){
-				$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.player.notFound"));
+				$sender->sendMessage("Can't find player " . $args[1]);
 
 				return true;
 			}
 		}elseif(!($sender instanceof Player)){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
+
+			return true;
 		}
 
-		$target->setGamemode($gameMode);
 		if($gameMode !== $target->getGamemode()){
-			$sender->sendMessage("Game mode change for " . $target->getName() . " failed!");
-		}else{
-			if($target === $sender){
-				Command::broadcastCommandMessage($sender, new TranslationContainer("commands.gamemode.success.self", [Server::getGamemodeString($gameMode)]));
+			$target->setGamemode($gameMode);
+			if($gameMode !== $target->getGamemode()){
+				$sender->sendMessage("Game mode change for " . $target->getName() . " failed!");
 			}else{
-				$target->sendMessage(new TranslationContainer("gameMode.changed", [Server::getGamemodeString($gameMode)]));
-				Command::broadcastCommandMessage($sender, new TranslationContainer("commands.gamemode.success.other", [Server::getGamemodeString($gameMode), $target->getName()]));
+				if($target === $sender){
+					Command::broadcastCommandMessage($sender, "Set own gamemode to " . strtolower(Server::getGamemodeString($gameMode)) . " mode");
+				}else{
+					Command::broadcastCommandMessage($sender, "Set " . $target->getName() . "'s gamemode to " . strtolower(Server::getGamemodeString($gameMode)) . " mode");
+				}
 			}
+		}else{
+			$sender->sendMessage($target->getName() . " already has game mode " . strtolower(Server::getGamemodeString($gameMode)));
+
+			return true;
 		}
 
 		return true;

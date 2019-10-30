@@ -1,49 +1,54 @@
 <?php
 
-/*
- *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
- * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * @author PocketMine Team
- * @link http://www.pocketmine.net/
- *
- *
-*/
-
-declare(strict_types=1);
-
 namespace pocketmine\item;
 
-use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\entity\Effect;
+use function count;
+use function numfmt_parse;
 
-class SplashPotion extends ProjectileItem{
+class SplashPotion extends Item
+{
+	public function __construct($meta = 0, $count = 1)
+    {
+        parent::__construct(self::SPLASH_POTION, $meta, $count, "Splash Potion"); //Custom naming could be handled by the client itself
+    }
 
-	public function __construct(int $meta = 0){
-		parent::__construct(self::SPLASH_POTION, $meta, "Splash Potion");
-	}
+	public static function getColor(int $meta): array
+    {
+        if(($effect = Effect::getEffect(self::getEffectId($meta))) !== null){
+            return $effect->getColor();
+        }
 
-	public function getMaxStackSize() : int{
-		return 1;
-	}
+        return [0, 0, 0];
+    }
+	
+	public static function getEffectId(int $meta): int
+    {
+        return Potion::POTIONS[$meta][0] ?? 0;
+    }
+	
+	public function getMaxStackSize(): int
+    {
+        return 1;
+    }
 
-	public function getProjectileEntityType() : string{
-		return "ThrownPotion";
-	}
+	/**
+     * @param int $id
+     * @return Effect[]
+     */
+	public static function getEffectsById(int $id): array
+    {
+        $effects = [];
 
-	public function getThrowForce() : float{
-		return 0.5;
-	}
+        $potion = Potion::POTIONS[$id] ?? [];
+        if(count($potion) === 3){
+            $effect = Effect::getEffect($potion[0]);
+            $effect->setDuration($potion[1]);
+            $effect->setAmplifier($potion[2]);
 
-	protected function addExtraTags(CompoundTag $tag) : void{
-		$tag->setShort("PotionId", $this->meta);
-	}
+            $effects[] = $effect;
+        }
+
+        return $effects;
+    }
 }

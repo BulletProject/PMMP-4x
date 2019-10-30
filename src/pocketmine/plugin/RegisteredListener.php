@@ -19,14 +19,12 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\plugin;
 
 use pocketmine\event\Cancellable;
 use pocketmine\event\Event;
 use pocketmine\event\Listener;
-use pocketmine\timings\TimingsHandler;
+use pocketmine\event\TimingsHandler;
 
 class RegisteredListener{
 
@@ -54,10 +52,10 @@ class RegisteredListener{
 	 * @param EventExecutor  $executor
 	 * @param int            $priority
 	 * @param Plugin         $plugin
-	 * @param bool           $ignoreCancelled
+	 * @param boolean        $ignoreCancelled
 	 * @param TimingsHandler $timings
 	 */
-	public function __construct(Listener $listener, EventExecutor $executor, int $priority, Plugin $plugin, bool $ignoreCancelled, TimingsHandler $timings){
+	public function __construct(Listener $listener, EventExecutor $executor, $priority, Plugin $plugin, $ignoreCancelled, TimingsHandler $timings){
 		$this->listener = $listener;
 		$this->priority = $priority;
 		$this->plugin = $plugin;
@@ -69,21 +67,21 @@ class RegisteredListener{
 	/**
 	 * @return Listener
 	 */
-	public function getListener() : Listener{
+	public function getListener(){
 		return $this->listener;
 	}
 
 	/**
 	 * @return Plugin
 	 */
-	public function getPlugin() : Plugin{
+	public function getPlugin(){
 		return $this->plugin;
 	}
 
 	/**
 	 * @return int
 	 */
-	public function getPriority() : int{
+	public function getPriority(){
 		return $this->priority;
 	}
 
@@ -94,9 +92,9 @@ class RegisteredListener{
 		if($event instanceof Cancellable and $event->isCancelled() and $this->isIgnoringCancelled()){
 			return;
 		}
-		$this->timings->startTiming();
+		//$this->timings->startTiming();
 		$this->executor->execute($this->listener, $event);
-		$this->timings->stopTiming();
+		//$this->timings->stopTiming();
 	}
 
 	public function __destruct(){
@@ -106,7 +104,7 @@ class RegisteredListener{
 	/**
 	 * @return bool
 	 */
-	public function isIgnoringCancelled() : bool{
-		return $this->ignoreCancelled;
+	public function isIgnoringCancelled(){
+		return $this->ignoreCancelled === true;
 	}
 }

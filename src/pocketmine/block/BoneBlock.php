@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,50 +15,39 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\block;
 
-use pocketmine\block\utils\PillarRotationHelper;
 use pocketmine\item\Item;
-use pocketmine\item\TieredTool;
-use pocketmine\math\Vector3;
-use pocketmine\Player;
+use pocketmine\item\Tool;
 
-class BoneBlock extends Solid{
+class BoneBlock extends Solid {
 
-	protected $id = Block::BONE_BLOCK;
+	protected $id = self::BONE_BLOCK;
 
-	public function __construct(int $meta = 0){
+	public function __construct($meta = 0){
 		$this->meta = $meta;
 	}
 
-	public function getName() : string{
+	public function getName(){
 		return "Bone Block";
 	}
 
-	public function getHardness() : float{
+	public function getHardness(){
 		return 2;
 	}
-
-	public function getToolType() : int{
-		return BlockToolType::TYPE_PICKAXE;
+	
+	public function getToolType() {
+		return Tool::TYPE_PICKAXE;
 	}
 
-	public function getToolHarvestLevel() : int{
-		return TieredTool::TIER_WOODEN;
+	public function getDrops(Item $item) {
+		return [
+			[Item::BONE_BLOCK, 0, 1]
+		];
 	}
 
-	public function place(Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, Player $player = null) : bool{
-		$this->meta = PillarRotationHelper::getMetaFromFace($this->meta, $face);
-		return $this->getLevel()->setBlock($blockReplace, $this, true, true);
-	}
-
-	public function getVariantBitmask() : int{
-		return 0x03;
-	}
 }

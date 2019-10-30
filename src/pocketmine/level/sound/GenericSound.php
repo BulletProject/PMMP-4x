@@ -19,40 +19,40 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\level\sound;
 
 use pocketmine\math\Vector3;
-use pocketmine\network\mcpe\protocol\LevelEventPacket;
+use pocketmine\network\protocol\LevelEventPacket;
 
 class GenericSound extends Sound{
-
-	/** @var int */
-	protected $id;
-	/** @var float */
-	protected $pitch = 0;
-
-	public function __construct(Vector3 $pos, int $id, float $pitch = 0){
+	
+	public function __construct(Vector3 $pos, $id, $pitch = 0){
 		parent::__construct($pos->x, $pos->y, $pos->z);
-		$this->id = $id;
-		$this->pitch = $pitch * 1000;
+		$this->id = (int) $id;
+		$this->pitch = (float) $pitch * 1000;
 	}
-
-	public function getPitch() : float{
+	
+	protected $pitch = 0;
+	protected $id;
+	
+	public function getPitch(){
 		return $this->pitch / 1000;
 	}
-
-	public function setPitch(float $pitch) : void{
-		$this->pitch = $pitch * 1000;
+	
+	public function setPitch($pitch){
+		$this->pitch = (float) $pitch * 1000;
 	}
-
+	
+	
 	public function encode(){
 		$pk = new LevelEventPacket;
 		$pk->evid = $this->id;
-		$pk->position = $this->asVector3();
+		$pk->x = $this->x;
+		$pk->y = $this->y;
+		$pk->z = $this->z;
 		$pk->data = (int) $this->pitch;
-
+		
 		return $pk;
 	}
+
 }

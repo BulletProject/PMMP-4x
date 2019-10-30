@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,204 +15,157 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
-
-declare(strict_types=1);
 
 namespace pocketmine\block;
 
 use pocketmine\entity\Entity;
 use pocketmine\item\Item;
+use pocketmine\item\Tool;
+use pocketmine\level\Level;
 use pocketmine\math\AxisAlignedBB;
-use pocketmine\math\Vector3;
 use pocketmine\Player;
-use function max;
-use function min;
 
-class Vine extends Flowable{
-	public const FLAG_SOUTH = 0x01;
-	public const FLAG_WEST = 0x02;
-	public const FLAG_NORTH = 0x04;
-	public const FLAG_EAST = 0x08;
+class Vine extends Transparent{
 
 	protected $id = self::VINE;
 
-	public function __construct(int $meta = 0){
+	public function __construct($meta = 0){
 		$this->meta = $meta;
 	}
 
-	public function getName() : string{
+	public function isSolid(){
+		return false;
+	}
+
+	public function getName(){
 		return "Vines";
 	}
 
-	public function getHardness() : float{
+	public function getHardness(){
 		return 0.2;
 	}
 
-	public function canPassThrough() : bool{
+	public function canPassThrough(){
 		return true;
 	}
 
-	public function hasEntityCollision() : bool{
+	public function hasEntityCollision(){
 		return true;
 	}
 
-	public function canClimb() : bool{
-		return true;
-	}
-
-	public function canBeReplaced() : bool{
-		return true;
-	}
-
-	public function onEntityCollide(Entity $entity) : void{
+	public function onEntityCollide(Entity $entity){
 		$entity->resetFallDistance();
+		$entity->onGround = true;
 	}
 
-	protected function recalculateBoundingBox() : ?AxisAlignedBB{
+	protected function recalculateBoundingBox(){
 
-		$minX = 1;
-		$minY = 1;
-		$minZ = 1;
-		$maxX = 0;
-		$maxY = 0;
-		$maxZ = 0;
+		$f1 = 1;
+		$f2 = 1;
+		$f3 = 1;
+		$f4 = 0;
+		$f5 = 0;
+		$f6 = 0;
 
 		$flag = $this->meta > 0;
 
-		if(($this->meta & self::FLAG_WEST) > 0){
-			$maxX = max($maxX, 0.0625);
-			$minX = 0;
-			$minY = 0;
-			$maxY = 1;
-			$minZ = 0;
-			$maxZ = 1;
+		if(($this->meta & 0x02) > 0){
+			$f4 = max($f4, 0.0625);
+			$f1 = 0;
+			$f2 = 0;
+			$f5 = 1;
+			$f3 = 0;
+			$f6 = 1;
 			$flag = true;
 		}
 
-		if(($this->meta & self::FLAG_EAST) > 0){
-			$minX = min($minX, 0.9375);
-			$maxX = 1;
-			$minY = 0;
-			$maxY = 1;
-			$minZ = 0;
-			$maxZ = 1;
+		if(($this->meta & 0x08) > 0){
+			$f1 = min($f1, 0.9375);
+			$f4 = 1;
+			$f2 = 0;
+			$f5 = 1;
+			$f3 = 0;
+			$f6 = 1;
 			$flag = true;
 		}
 
-		if(($this->meta & self::FLAG_SOUTH) > 0){
-			$minZ = min($minZ, 0.9375);
-			$maxZ = 1;
-			$minX = 0;
-			$maxX = 1;
-			$minY = 0;
-			$maxY = 1;
+		if(($this->meta & 0x01) > 0){
+			$f3 = min($f3, 0.9375);
+			$f6 = 1;
+			$f1 = 0;
+			$f4 = 1;
+			$f2 = 0;
+			$f5 = 1;
 			$flag = true;
 		}
 
-		//TODO: Missing NORTH check
-
-		if(!$flag and $this->getSide(Vector3::SIDE_UP)->isSolid()){
-			$minY = min($minY, 0.9375);
-			$maxY = 1;
-			$minX = 0;
-			$maxX = 1;
-			$minZ = 0;
-			$maxZ = 1;
+		if(!$flag and $this->getSide(1)->isSolid()){
+			$f2 = min($f2, 0.9375);
+			$f5 = 1;
+			$f1 = 0;
+			$f4 = 1;
+			$f3 = 0;
+			$f6 = 1;
 		}
 
 		return new AxisAlignedBB(
-			$this->x + $minX,
-			$this->y + $minY,
-			$this->z + $minZ,
-			$this->x + $maxX,
-			$this->y + $maxY,
-			$this->z + $maxZ
+			$this->x + $f1,
+			$this->y + $f2,
+			$this->z + $f3,
+			$this->x + $f4,
+			$this->y + $f5,
+			$this->z + $f6
 		);
 	}
 
-	public function place(Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, Player $player = null) : bool{
-		if(!$blockClicked->isSolid() or $face === Vector3::SIDE_UP or $face === Vector3::SIDE_DOWN){
-			return false;
-		}
 
-		$faces = [
-			Vector3::SIDE_NORTH => self::FLAG_SOUTH,
-			Vector3::SIDE_SOUTH => self::FLAG_NORTH,
-			Vector3::SIDE_WEST => self::FLAG_EAST,
-			Vector3::SIDE_EAST => self::FLAG_WEST
-		];
+	public function place(Item $item, Block $block, Block $target, $face, $fx, $fy, $fz, Player $player = null){
+		if(!$target->isTransparent() and $target->isSolid()){
+			$faces = [
+				0 => 0,
+				1 => 0,
+				2 => 1,
+				3 => 4,
+				4 => 8,
+				5 => 2,
+			];
+			if(isset($faces[$face])){
+				$this->meta = $faces[$face];
+				$this->getLevel()->setBlock($block, $this, true, true);
 
-		$this->meta = $faces[$face] ?? 0;
-		if($blockReplace->getId() === $this->getId()){
-			$this->meta |= $blockReplace->meta;
-		}
-
-		$this->getLevel()->setBlock($blockReplace, $this, true, true);
-		return true;
-	}
-
-	public function onNearbyBlockChange() : void{
-		$sides = [
-			self::FLAG_SOUTH => Vector3::SIDE_SOUTH,
-			self::FLAG_WEST => Vector3::SIDE_WEST,
-			self::FLAG_NORTH => Vector3::SIDE_NORTH,
-			self::FLAG_EAST => Vector3::SIDE_EAST
-		];
-
-		$meta = $this->meta;
-
-		foreach($sides as $flag => $side){
-			if(($meta & $flag) === 0){
-				continue;
-			}
-
-			if(!$this->getSide($side)->isSolid()){
-				$meta &= ~$flag;
+				return true;
 			}
 		}
 
-		if($meta !== $this->meta){
-			if($meta === 0){
-				$this->level->useBreakOn($this);
-			}else{
-				$this->meta = $meta;
-				$this->level->setBlock($this, $this);
-			}
+		return false;
+	}
+
+	public function onUpdate($type){
+		if($type === Level::BLOCK_UPDATE_NORMAL){
+			/*if($this->getSide(0)->getId() === self::AIR){ //Replace with common break method
+				Server::getInstance()->api->entity->drop($this, Item::get(LADDER, 0, 1));
+				$this->getLevel()->setBlock($this, new Air(), true, true, true);
+				return Level::BLOCK_UPDATE_NORMAL;
+			}*/
+		}
+
+		return false;
+	}
+
+	public function getDrops(Item $item){
+		if($item->isShears()){
+			return [
+				[$this->id, 0, 1],
+			];
+		}else{
+			return [];
 		}
 	}
 
-	public function ticksRandomly() : bool{
-		return true;
-	}
-
-	public function onRandomTick() : void{
-		//TODO: vine growth
-	}
-
-	public function getVariantBitmask() : int{
-		return 0;
-	}
-
-	public function getDrops(Item $item) : array{
-		if($item->getBlockToolType() & BlockToolType::TYPE_SHEARS){
-			return $this->getDropsForCompatibleTool($item);
-		}
-
-		return [];
-	}
-
-	public function getToolType() : int{
-		return BlockToolType::TYPE_AXE;
-	}
-
-	public function getFlameEncouragement() : int{
-		return 15;
-	}
-
-	public function getFlammability() : int{
-		return 100;
+	public function getToolType(){
+		return Tool::TYPE_AXE;
 	}
 }

@@ -14,18 +14,13 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event;
 
-use function constant;
-use function defined;
-use function strtoupper;
 
 /**
  * List of event priorities
@@ -36,59 +31,33 @@ use function strtoupper;
  * MONITOR events should not change the event outcome or contents
  */
 abstract class EventPriority{
-	public const ALL = [
-		self::LOWEST,
-		self::LOW,
-		self::NORMAL,
-		self::HIGH,
-		self::HIGHEST,
-		self::MONITOR
-	];
-
 	/**
 	 * Event call is of very low importance and should be ran first, to allow
 	 * other plugins to further customise the outcome
 	 */
-	public const LOWEST = 5;
+	const LOWEST = 5;
 	/**
 	 * Event call is of low importance
 	 */
-	public const LOW = 4;
+	const LOW = 4;
 	/**
-	 * Event call is neither important or unimportant, and may be ran normally.
-	 * This is the default priority.
+	 * Event call is neither important or unimportant, and may be ran normally
 	 */
-	public const NORMAL = 3;
+	const NORMAL = 3;
 	/**
 	 * Event call is of high importance
 	 */
-	public const HIGH = 2;
+	const HIGH = 2;
 	/**
 	 * Event call is critical and must have the final say in what happens
 	 * to the event
 	 */
-	public const HIGHEST = 1;
+	const HIGHEST = 1;
 	/**
 	 * Event is listened to purely for monitoring the outcome of an event.
 	 *
 	 * No modifications to the event should be made under this priority
 	 */
-	public const MONITOR = 0;
+	const MONITOR = 0;
 
-	/**
-	 * @param string $name
-	 *
-	 * @return int
-	 *
-	 * @throws \InvalidArgumentException
-	 */
-	public static function fromString(string $name) : int{
-		$name = strtoupper($name);
-		$const = self::class . "::" . $name;
-		if($name !== "ALL" and defined($const)){
-			return constant($const);
-		}
-
-		throw new \InvalidArgumentException("Unable to resolve priority \"$name\"");
-	}
 }

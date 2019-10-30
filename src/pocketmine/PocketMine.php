@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,271 +15,464 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
 
-declare(strict_types=1);
-
 namespace {
-	const INT32_MIN = -0x80000000;
-	const INT32_MAX = 0x7fffffff;
+	function safe_var_dump(){
+		static $cnt = 0;
+		foreach(func_get_args() as $var){
+			switch(true){
+				case is_array($var):
+					echo str_repeat("  ", $cnt) . "array(" . count($var) . ") {" . PHP_EOL;
+					foreach($var as $key => $value){
+						echo str_repeat("  ", $cnt + 1) . "[" . (is_integer($key) ? $key : '"' . $key . '"') . "]=>" . PHP_EOL;
+						++$cnt;
+						safe_var_dump($value);
+						--$cnt;
+					}
+					echo str_repeat("  ", $cnt) . "}" . PHP_EOL;
+					break;
+				case is_int($var):
+					echo str_repeat("  ", $cnt) . "int(" . $var . ")" . PHP_EOL;
+					break;
+				case is_float($var):
+					echo str_repeat("  ", $cnt) . "float(" . $var . ")" . PHP_EOL;
+					break;
+				case is_bool($var):
+					echo str_repeat("  ", $cnt) . "bool(" . ($var === true ? "true" : "false") . ")" . PHP_EOL;
+					break;
+				case is_string($var):
+					echo str_repeat("  ", $cnt) . "string(" . strlen($var) . ") \"$var\"" . PHP_EOL;
+					break;
+				case is_resource($var):
+					echo str_repeat("  ", $cnt) . "resource() of type (" . get_resource_type($var) . ")" . PHP_EOL;
+					break;
+				case is_object($var):
+					echo str_repeat("  ", $cnt) . "object(" . get_class($var) . ")" . PHP_EOL;
+					break;
+				case is_null($var):
+					echo str_repeat("  ", $cnt) . "NULL" . PHP_EOL;
+					break;
+			}
+		}
+	}
+
+	function dummy(){
+
+	}
 }
 
 namespace pocketmine {
-
+	use pocketmine\utils\Binary;
 	use pocketmine\utils\MainLogger;
 	use pocketmine\utils\ServerKiller;
 	use pocketmine\utils\Terminal;
-	use pocketmine\utils\Timezone;
 	use pocketmine\utils\Utils;
-	use pocketmine\utils\VersionString;
-	use pocketmine\wizard\SetupWizard;
+	use pocketmine\wizard\Installer;
 
-	require_once __DIR__ . '/VersionInfo.php';
-
-	const MIN_PHP_VERSION = "7.2.0";
-
-	function critical_error($message){
-		echo "[ERROR] $message" . PHP_EOL;
-	}
+	const VERSION = '1.5.1-hybrid';
+	const API_VERSION = "1.12.0";
+	const CODENAME = "刀 (Katana)";
+	const MINECRAFT_VERSION = "v1.x";
+	const MINECRAFT_VERSION_NETWORK = "1.2";
 
 	/*
 	 * Startup code. Do not look at it, it may harm you.
+	 * Most of them are hacks to fix date-related bugs, or basic functions used after this
 	 * This is the only non-class based file on this project.
 	 * Enjoy it as much as I did writing it. I don't want to do it again.
 	 */
 
+	if(\Phar::running(true) !== ""){
+		@define("pocketmine\\PATH", \Phar::running(true) . "/");
+	}else{
+		@define("pocketmine\\PATH", getcwd() . DIRECTORY_SEPARATOR);
+	}
+
+	if(version_compare("7.0", PHP_VERSION) > 0){
+		echo "[CRITICAL] You must use PHP >= 7.0" . PHP_EOL;
+		echo "[CRITICAL] Please use the installer provided on the homepage." . PHP_EOL;
+		exit(1);
+	}
+
+	if(!extension_loaded("pthreads")){
+		echo "[CRITICAL] Unable to find the pthreads extension." . PHP_EOL;
+		echo "[CRITICAL] Please use the installer provided on the homepage." . PHP_EOL;
+		exit(1);
+	}
+
+	if(!class_exists("ClassLoader", false)){
+		require_once(\pocketmine\PATH . "src/spl/ClassLoader.php");
+		require_once(\pocketmine\PATH . "src/spl/BaseClassLoader.php");
+		require_once(\pocketmine\PATH . "src/pocketmine/CompatibleClassLoader.php");
+	}
+
+	$autoloader = new CompatibleClassLoader();
+	$autoloader->addPath(\pocketmine\PATH . "src");
+	require_once(\pocketmine\PATH . "src/pocketmine/utils/Utils.php");
+	$autoloader->addPath(\pocketmine\PATH . "src" . DIRECTORY_SEPARATOR . "spl");
+	$autoloader->register(true);
+
+
+	set_time_limit(0); //Who set it to 30 seconds?!?!
+
+	gc_enable();
+	error_reporting(-1);
+	//ini_set("allow_url_fopen", 1);
+	//ini_set("display_errors", 1);
+	//ini_set("display_startup_errors", 1);
+	//ini_set("default_charset", "utf-8");
+	//ini_set("error_log", "logs/" . date('Y.m.d') . "_php_error.log");
+	
+	//ini_set("memory_limit", -1);
+	define("pocketmine\\START_TIME", microtime(true));
+
+	$opts = getopt("", ["data:", "plugins:", "no-wizard", "enable-profiler"]);
+
+	define("pocketmine\\DATA", isset($opts["data"]) ? $opts["data"] . DIRECTORY_SEPARATOR : getcwd() . DIRECTORY_SEPARATOR);
+	define("pocketmine\\PLUGIN_PATH", isset($opts["plugins"]) ? $opts["plugins"] . DIRECTORY_SEPARATOR : getcwd() . DIRECTORY_SEPARATOR . "plugins" . DIRECTORY_SEPARATOR);
+
+	Terminal::init();
+
+	define("pocketmine\\ANSI", Terminal::hasFormattingCodes());
+
+	if(!file_exists(\pocketmine\DATA)){
+		mkdir(\pocketmine\DATA, 0777, true);
+	}
+
+	//Logger has a dependency on timezone, so we'll set it to UTC until we can get the actual timezone.
+	date_default_timezone_set("UTC");
+	$logger = new MainLogger(\pocketmine\DATA . "server.log", \pocketmine\ANSI);
+
+	if(!ini_get("date.timezone")){
+		if(($timezone = detect_system_timezone()) and date_default_timezone_set($timezone)){
+			//Success! Timezone has already been set and validated in the if statement.
+			//This here is just for redundancy just in case some program wants to read timezone data from the ini.
+			//ini_set("date.timezone", $timezone);
+		}else{
+			//If system timezone detection fails or timezone is an invalid value.
+			if($response = Utils::getURL("http://ip-api.com/json")
+				and $ip_geolocation_data = json_decode($response, true)
+				and $ip_geolocation_data['status'] != 'fail'
+				and date_default_timezone_set($ip_geolocation_data['timezone'])
+			){
+				//Again, for redundancy.
+				//ini_set("date.timezone", $ip_geolocation_data['timezone']);
+			}else{
+				//ini_set("date.timezone", "UTC");
+				date_default_timezone_set("UTC");
+				$logger->warning("Timezone could not be automatically determined. An incorrect timezone will result in incorrect timestamps on console logs. It has been set to \"UTC\" by default. You can change it on the php.ini file.");
+			}
+		}
+	}else{
+		/*
+		 * This is here so that people don't come to us complaining and fill up the issue tracker when they put
+		 * an incorrect timezone abbreviation in php.ini apparently.
+		 */
+		$default_timezone = date_default_timezone_get();
+		if(strpos($default_timezone, "/") === false){
+			$default_timezone = timezone_name_from_abbr($default_timezone);
+			//ini_set("date.timezone", $default_timezone);
+			date_default_timezone_set($default_timezone);
+		}
+	}
+
+	function detect_system_timezone(){
+		switch(Utils::getOS()){
+			case 'win':
+				$regex = '/(UTC)(\+*\-*\d*\d*\:*\d*\d*)/';
+
+				/*
+				 * wmic timezone get Caption
+				 * Get the timezone offset
+				 *
+				 * Sample Output var_dump
+				 * array(3) {
+				 *	  [0] =>
+				 *	  string(7) "Caption"
+				 *	  [1] =>
+				 *	  string(20) "(UTC+09:30) Adelaide"
+				 *	  [2] =>
+				 *	  string(0) ""
+				 *	}
+				 */
+				exec("wmic timezone get Caption", $output);
+
+				$string = trim(implode("\n", $output));
+
+				//Detect the Time Zone string
+				preg_match($regex, $string, $matches);
+
+				if(!isset($matches[2])){
+					return false;
+				}
+
+				$offset = $matches[2];
+
+				if($offset == ""){
+					return "UTC";
+				}
+
+				return parse_offset($offset);
+				break;
+			case 'linux':
+				// Ubuntu / Debian.
+				if(file_exists('/etc/timezone')){
+					$data = file_get_contents('/etc/timezone');
+					if($data){
+						return trim($data);
+					}
+				}
+
+				// RHEL / CentOS
+				if(file_exists('/etc/sysconfig/clock')){
+					$data = parse_ini_file('/etc/sysconfig/clock');
+					if(!empty($data['ZONE'])){
+						return trim($data['ZONE']);
+					}
+				}
+
+				//Portable method for incompatible linux distributions.
+
+				$offset = trim(exec('date +%:z'));
+
+				if($offset == "+00:00"){
+					return "UTC";
+				}
+
+				return parse_offset($offset);
+				break;
+			case 'mac':
+				if(is_link('/etc/localtime')){
+					$filename = readlink('/etc/localtime');
+					if(strpos($filename, '/usr/share/zoneinfo/') === 0){
+						$timezone = substr($filename, 20);
+						return trim($timezone);
+					}
+				}
+
+				return false;
+				break;
+			default:
+				return false;
+				break;
+		}
+	}
+
 	/**
-	 * @return string[]
+	 * @param string $offset In the format of +09:00, +02:00, -04:00 etc.
+	 *
+	 * @return string
 	 */
-	function check_platform_dependencies(){
-		if(version_compare(MIN_PHP_VERSION, PHP_VERSION) > 0){
-			//If PHP version isn't high enough, anything below might break, so don't bother checking it.
-			return [
-				\pocketmine\NAME . " requires PHP >= " . MIN_PHP_VERSION . ", but you have PHP " . PHP_VERSION . "."
-			];
+	function parse_offset($offset){
+		//Make signed offsets unsigned for date_parse
+		if(strpos($offset, '-') !== false){
+			$negative_offset = true;
+			$offset = str_replace('-', '', $offset);
+		}else{
+			if(strpos($offset, '+') !== false){
+				$negative_offset = false;
+				$offset = str_replace('+', '', $offset);
+			}else{
+				return false;
+			}
+		}
+
+		$parsed = date_parse($offset);
+		$offset = $parsed['hour'] * 3600 + $parsed['minute'] * 60 + $parsed['second'];
+
+		//After date_parse is done, put the sign back
+		if($negative_offset == true){
+			$offset = -abs($offset);
+		}
+
+		//And then, look the offset up.
+		//timezone_name_from_abbr is not used because it returns false on some(most) offsets because it's mapping function is weird.
+		//That's been a bug in PHP since 2008!
+		foreach(timezone_abbreviations_list() as $zones){
+			foreach($zones as $timezone){
+				if($timezone['offset'] == $offset){
+					return $timezone['timezone_id'];
+				}
+			}
+		}
+
+		return false;
+	}
+
+	if(isset($opts["enable-profiler"])){
+		if(function_exists("profiler_enable")){
+			\profiler_enable();
+			$logger->notice("Execution is being profiled");
+		}else{
+			$logger->notice("No profiler found. Please install https://github.com/krakjoe/profiler");
+		}
+	}
+
+	function kill($pid){
+		switch(Utils::getOS()){
+			case "win":
+				exec("taskkill.exe /F /PID " . ((int) $pid) . " > NUL");
+				break;
+			case "mac":
+			case "linux":
+			default:
+				exec("kill -9 " . ((int) $pid) . " > /dev/null 2>&1");
+				}
+		}
+
+	/**
+	 * @param object $value
+	 * @param bool   $includeCurrent
+	 *
+	 * @return int
+	 */
+	function getReferenceCount($value, $includeCurrent = true){
+		ob_start();
+		debug_zval_dump($value);
+		$ret = explode("\n", ob_get_contents());
+		ob_end_clean();
+
+		if(count($ret) >= 1 and preg_match('/^.* refcount\\(([0-9]+)\\)\\{$/', trim($ret[0]), $m) > 0){
+			return ((int) $m[1]) - ($includeCurrent ? 3 : 4); //$value + zval call + extra call
+		}
+		return -1;
+	}
+
+	function getTrace($start = 1, $trace = null){
+		if($trace === null){
+			if(function_exists("xdebug_get_function_stack")){
+				$trace = array_reverse(xdebug_get_function_stack());
+			}else{
+				$e = new \Exception();
+				$trace = $e->getTrace();
+			}
 		}
 
 		$messages = [];
-
-		if(PHP_INT_SIZE < 8){
-			$messages[] = "Running " . \pocketmine\NAME . " with 32-bit systems/PHP is no longer supported. Please upgrade to a 64-bit system, or use a 64-bit PHP binary if this is a 64-bit system.";
-		}
-
-		if(php_sapi_name() !== "cli"){
-			$messages[] = "You must run " . \pocketmine\NAME . " using the CLI.";
-		}
-
-		$extensions = [
-			"bcmath" => "BC Math",
-			"curl" => "cURL",
-			"ctype" => "ctype",
-			"date" => "Date",
-			"hash" => "Hash",
-			"json" => "JSON",
-			"mbstring" => "Multibyte String",
-			"openssl" => "OpenSSL",
-			"pcre" => "PCRE",
-			"phar" => "Phar",
-			"pthreads" => "pthreads",
-			"reflection" => "Reflection",
-			"sockets" => "Sockets",
-			"spl" => "SPL",
-			"yaml" => "YAML",
-			"zip" => "Zip",
-			"zlib" => "Zlib"
-		];
-
-		foreach($extensions as $ext => $name){
-			if(!extension_loaded($ext)){
-				$messages[] = "Unable to find the $name ($ext) extension.";
+		$j = 0;
+		for($i = (int) $start; isset($trace[$i]); ++$i, ++$j){
+			$params = "";
+			if(isset($trace[$i]["args"]) or isset($trace[$i]["params"])){
+				if(isset($trace[$i]["args"])){
+					$args = $trace[$i]["args"];
+				}else{
+					$args = $trace[$i]["params"];
+				}
+				foreach($args as $name => $value){
+					$params .= (is_object($value) ? get_class($value) . " " . (method_exists($value, "__toString") ? $value->__toString() : "object") : gettype($value) . " " . (is_array($value) ? "Array()" : Utils::printable(@strval($value)))) . ", ";
+				}
 			}
-		}
-
-		if(extension_loaded("pthreads")){
-			$pthreads_version = phpversion("pthreads");
-			if(substr_count($pthreads_version, ".") < 2){
-				$pthreads_version = "0.$pthreads_version";
-			}
-			if(version_compare($pthreads_version, "3.2.0") < 0){
-				$messages[] = "pthreads >= 3.2.0 is required, while you have $pthreads_version.";
-			}
-		}
-
-		if(extension_loaded("leveldb")){
-			$leveldb_version = phpversion("leveldb");
-			if(version_compare($leveldb_version, "0.2.1") < 0){
-				$messages[] = "php-leveldb >= 0.2.1 is required, while you have $leveldb_version.";
-			}
-		}
-
-		if(extension_loaded("pocketmine")){
-			$messages[] = "The native PocketMine extension is no longer supported.";
+			$messages[] = "#$j " . (isset($trace[$i]["file"]) ? cleanPath($trace[$i]["file"]) : "") . "(" . (isset($trace[$i]["line"]) ? $trace[$i]["line"] : "") . "): " . (isset($trace[$i]["class"]) ? $trace[$i]["class"] . (($trace[$i]["type"] === "dynamic" or $trace[$i]["type"] === "->") ? "->" : "::") : "") . $trace[$i]["function"] . "(" . Utils::printable(substr($params, 0, -2)) . ")";
 		}
 
 		return $messages;
 	}
 
-	function server(){
-		if(!empty($messages = check_platform_dependencies())){
-			echo PHP_EOL;
-			$binary = version_compare(PHP_VERSION, "5.4") >= 0 ? PHP_BINARY : "unknown";
-			critical_error("Selected PHP binary ($binary) does not satisfy some requirements.");
-			foreach($messages as $m){
-				echo " - $m" . PHP_EOL;
-			}
-			critical_error("Please recompile PHP with the needed configuration, or refer to the installation instructions at http://pmmp.rtfd.io/en/rtfd/installation.html.");
-			echo PHP_EOL;
-			exit(1);
-		}
-		unset($messages);
-
-		error_reporting(-1);
-
-		if(\Phar::running(true) !== ""){
-			define('pocketmine\PATH', \Phar::running(true) . "/");
-		}else{
-			define('pocketmine\PATH', dirname(__FILE__, 3) . DIRECTORY_SEPARATOR);
-		}
-
-		$opts = getopt("", ["bootstrap:"]);
-		if(isset($opts["bootstrap"])){
-			$bootstrap = realpath($opts["bootstrap"]) ?: $opts["bootstrap"];
-		}else{
-			$bootstrap = \pocketmine\PATH . 'vendor/autoload.php';
-		}
-		define('pocketmine\COMPOSER_AUTOLOADER_PATH', $bootstrap);
-
-		if(\pocketmine\COMPOSER_AUTOLOADER_PATH !== false and is_file(\pocketmine\COMPOSER_AUTOLOADER_PATH)){
-			require_once(\pocketmine\COMPOSER_AUTOLOADER_PATH);
-		}else{
-			critical_error("Composer autoloader not found at " . $bootstrap);
-			critical_error("Please install/update Composer dependencies or use provided builds.");
-			exit(1);
-		}
-
-		set_error_handler([Utils::class, 'errorExceptionHandler']);
-
-		/*
-		 * We now use the Composer autoloader, but this autoloader is still for loading plugins.
-		 */
-		$autoloader = new \BaseClassLoader();
-		$autoloader->register(false);
-
-		set_time_limit(0); //Who set it to 30 seconds?!?!
-
-	//ini_set("allow_url_fopen", '1');
-	//ini_set("display_errors", '1');
-	//ini_set("display_startup_errors", '1');
-	//ini_set("default_charset", "utf-8");
-
-	//ini_set("memory_limit", '-1');
-
-		define('pocketmine\RESOURCE_PATH', \pocketmine\PATH . 'src' . DIRECTORY_SEPARATOR . 'pocketmine' . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR);
-
-		$opts = getopt("", ["data:", "plugins:", "no-wizard", "enable-ansi", "disable-ansi"]);
-
-		define('pocketmine\DATA', isset($opts["data"]) ? $opts["data"] . DIRECTORY_SEPARATOR : realpath(getcwd()) . DIRECTORY_SEPARATOR);
-		define('pocketmine\PLUGIN_PATH', isset($opts["plugins"]) ? $opts["plugins"] . DIRECTORY_SEPARATOR : realpath(getcwd()) . DIRECTORY_SEPARATOR . "plugins" . DIRECTORY_SEPARATOR);
-
-		if(!file_exists(\pocketmine\DATA)){
-			mkdir(\pocketmine\DATA, 0777, true);
-		}
-
-		define('pocketmine\LOCK_FILE_PATH', \pocketmine\DATA . 'server.lock');
-		define('pocketmine\LOCK_FILE', fopen(\pocketmine\LOCK_FILE_PATH, "a+b"));
-		if(!flock(\pocketmine\LOCK_FILE, LOCK_EX | LOCK_NB)){
-			//wait for a shared lock to avoid race conditions if two servers started at the same time - this makes sure the
-			//other server wrote its PID and released exclusive lock before we get our lock
-			flock(\pocketmine\LOCK_FILE, LOCK_SH);
-			$pid = stream_get_contents(\pocketmine\LOCK_FILE);
-			critical_error("Another " . \pocketmine\NAME . " instance (PID $pid) is already using this folder (" . realpath(\pocketmine\DATA) . ").");
-			critical_error("Please stop the other server first before running a new one.");
-			exit(1);
-		}
-		ftruncate(\pocketmine\LOCK_FILE, 0);
-		fwrite(\pocketmine\LOCK_FILE, (string) getmypid());
-		fflush(\pocketmine\LOCK_FILE);
-		flock(\pocketmine\LOCK_FILE, LOCK_SH); //prevent acquiring an exclusive lock from another process, but allow reading
-
-		//Logger has a dependency on timezone
-		$tzError = Timezone::init();
-
-		if(isset($opts["enable-ansi"])){
-			Terminal::init(true);
-		}elseif(isset($opts["disable-ansi"])){
-			Terminal::init(false);
-		}else{
-			Terminal::init();
-		}
-
-		$logger = new MainLogger(\pocketmine\DATA . "server.log");
-		$logger->registerStatic();
-
-		foreach($tzError as $e){
-			$logger->warning($e);
-		}
-		unset($tzError);
-
-		if(extension_loaded("xdebug")){
-			$logger->warning(PHP_EOL . PHP_EOL . PHP_EOL . "\tYou are running " . \pocketmine\NAME . " with xdebug enabled. This has a major impact on performance." . PHP_EOL . PHP_EOL);
-		}
-		if(!extension_loaded("pocketmine_chunkutils")){
-			$logger->warning("ChunkUtils extension is missing. Anvil-format worlds will experience degraded performance.");
-		}
-
-		if(\Phar::running(true) === ""){
-			$logger->warning("Non-packaged " . \pocketmine\NAME . " installation detected. Consider using a phar in production for better performance.");
-		}
-
-		$version = new VersionString(\pocketmine\BASE_VERSION, \pocketmine\IS_DEVELOPMENT_BUILD, \pocketmine\BUILD_NUMBER);
-		define('pocketmine\VERSION', $version->getFullVersion(true));
-
-		$gitHash = str_repeat("00", 20);
-
-		define('pocketmine\GIT_COMMIT', $gitHash);
-
-
-		@define("INT32_MASK", is_int(0xffffffff) ? 0xffffffff : -1);
-		@ini_set("opcache.mmap_base", bin2hex(random_bytes(8))); //Fix OPCache address errors
-
-		$exitCode = 0;
-		do{
-			if(!file_exists(\pocketmine\DATA . "server.properties") and !isset($opts["no-wizard"])){
-				$installer = new SetupWizard();
-				if(!$installer->run()){
-					$exitCode = -1;
-					break;
-				}
-			}
-
-			//TODO: move this to a Server field
-			define('pocketmine\START_TIME', microtime(true));
-			ThreadManager::init();
-			new Server($autoloader, $logger, \pocketmine\DATA, \pocketmine\PLUGIN_PATH);
-
-			$logger->info("Stopping other threads");
-
-			$killer = new ServerKiller(8);
-			$killer->start(PTHREADS_INHERIT_NONE);
-			usleep(10000); //Fixes ServerKiller not being able to start on single-core machines
-
-			if(ThreadManager::getInstance()->stopAll() > 0){
-				if(\pocketmine\DEBUG > 1){
-					echo "Some threads could not be stopped, performing a force-kill" . PHP_EOL . PHP_EOL;
-				}
-				Utils::kill(getmypid());
-			}
-		}while(false);
-
-		$logger->shutdown();
-		$logger->join();
-
-		echo Terminal::$FORMAT_RESET . PHP_EOL;
-
-		exit($exitCode);
+	function cleanPath($path){
+		return rtrim(str_replace(["\\", ".php", "phar://", rtrim(str_replace(["\\", "phar://"], ["/", ""], \pocketmine\PATH), "/"), rtrim(str_replace(["\\", "phar://"], ["/", ""], \pocketmine\PLUGIN_PATH), "/")], ["/", "", "", "", ""], $path), "/");
 	}
 
-	\pocketmine\server();
+	$errors = 0;
+
+	if(php_sapi_name() !== "cli"){
+		$logger->critical("You must run PocketMine-MP using the CLI.");
+		++$errors;
+	}
+
+	if(!extension_loaded("sockets")){
+		$logger->critical("Unable to find the Socket extension.");
+		++$errors;
+	}
+
+	$pthreads_version = phpversion("pthreads");
+	if(substr_count($pthreads_version, ".") < 2){
+		$pthreads_version = "0.$pthreads_version";
+	}
+	if(version_compare($pthreads_version, "3.0.7") < 0){
+		$logger->critical("pthreads >= 3.0.7 is required, while you have $pthreads_version.");
+		++$errors;
+	}
+
+	if(!extension_loaded("uopz")){
+		//$logger->notice("Couldn't find the uopz extension. Some functions may be limited");
+	}
+
+	if(extension_loaded("pocketmine")){
+		if(version_compare(phpversion("pocketmine"), "0.0.1") < 0){
+			$logger->critical("You have the native PocketMine extension, but your version is lower than 0.0.1.");
+			++$errors;
+		}elseif(version_compare(phpversion("pocketmine"), "0.0.4") > 0){
+			$logger->critical("You have the native PocketMine extension, but your version is higher than 0.0.4.");
+			++$errors;
+		}
+	}
+
+	if(!extension_loaded("curl")){
+		$logger->critical("Unable to find the cURL extension.");
+		++$errors;
+	}
+
+	if(!extension_loaded("yaml")){
+		$logger->critical("Unable to find the YAML extension.");
+		++$errors;
+	}
+
+	if(!extension_loaded("sqlite3")){
+		$logger->critical("Unable to find the SQLite3 extension.");
+		++$errors;
+	}
+
+	if(!extension_loaded("zlib")){
+		$logger->critical("Unable to find the Zlib extension.");
+		++$errors;
+	}
+
+	if($errors > 0){
+		$logger->critical("Please use the installer provided on the homepage, or recompile PHP again.");
+		$logger->shutdown();
+		$logger->join();
+		exit(1); //Exit with error
+	}
+
+	if(file_exists(\pocketmine\PATH . ".git/refs/heads/master")){ //Found Git information!
+		define("pocketmine\\GIT_COMMIT", strtolower(trim(file_get_contents(\pocketmine\PATH . ".git/refs/heads/master"))));
+	}else{ //Unknown :(
+		define("pocketmine\\GIT_COMMIT", str_repeat("00", 20));
+	}
+
+	@define("ENDIANNESS", (pack("d", 1) === "\77\360\0\0\0\0\0\0" ? Binary::BIG_ENDIAN : Binary::LITTLE_ENDIAN));
+	@define("INT32_MASK", is_int(0xffffffff) ? 0xffffffff : -1);
+	//@//ini_set("opcache.mmap_base", bin2hex(Utils::getRandomBytes(8, false))); //Fix OPCache address errors
+
+	if(!file_exists(\pocketmine\DATA . "server.properties") and !isset($opts["no-wizard"])){
+		new Installer();
+	}
+
+	if(\Phar::running(true) === ""){
+		$logger->warning("Non-packaged PocketMine-Steadfast installation detected, do not use on production.");
+	}
+
+	ThreadManager::init();
+	$server = new Server($autoloader, $logger, \pocketmine\PATH, \pocketmine\DATA, \pocketmine\PLUGIN_PATH);
+
+	$logger->info("Stopping other threads");
+
+	foreach(ThreadManager::getInstance()->getAll() as $id => $thread){
+		$logger->debug("Stopping " . (new \ReflectionClass($thread))->getShortName() . " thread");
+		$thread->quit();
+	}
+
+	$killer = new ServerKiller(8);
+	$killer->start();
+
+	$logger->shutdown();
+	$logger->join();
+
+	echo Terminal::$FORMAT_RESET . "\n";
+
+	exit(0);
+
 }

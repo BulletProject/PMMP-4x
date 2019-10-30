@@ -1,6 +1,6 @@
 <?php
 
-/*
+/**
  *
  *  ____            _        _   __  __ _                  __  __ ____
  * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\inventory;
 
@@ -29,66 +27,59 @@ use pocketmine\item\Item;
 use pocketmine\tile\Furnace;
 
 class FurnaceBurnEvent extends BlockEvent implements Cancellable{
-	/** @var Furnace */
+	public static $handlerList = null;
+
 	private $furnace;
-	/** @var Item */
 	private $fuel;
-	/** @var int */
 	private $burnTime;
-	/** @var bool */
 	private $burning = true;
 
-	/**
-	 * @param Furnace $furnace
-	 * @param Item    $fuel
-	 * @param int     $burnTime
-	 */
-	public function __construct(Furnace $furnace, Item $fuel, int $burnTime){
+	public function __construct(Furnace $furnace, Item $fuel, $burnTime){
 		parent::__construct($furnace->getBlock());
 		$this->fuel = $fuel;
-		$this->burnTime = $burnTime;
+		$this->burnTime = (int) $burnTime;
 		$this->furnace = $furnace;
 	}
 
 	/**
 	 * @return Furnace
 	 */
-	public function getFurnace() : Furnace{
+	public function getFurnace(){
 		return $this->furnace;
 	}
 
 	/**
 	 * @return Item
 	 */
-	public function getFuel() : Item{
+	public function getFuel(){
 		return $this->fuel;
 	}
 
 	/**
 	 * @return int
 	 */
-	public function getBurnTime() : int{
+	public function getBurnTime(){
 		return $this->burnTime;
 	}
 
 	/**
 	 * @param int $burnTime
 	 */
-	public function setBurnTime(int $burnTime) : void{
-		$this->burnTime = $burnTime;
+	public function setBurnTime($burnTime){
+		$this->burnTime = (int) $burnTime;
 	}
 
 	/**
 	 * @return bool
 	 */
-	public function isBurning() : bool{
+	public function isBurning(){
 		return $this->burning;
 	}
 
 	/**
 	 * @param bool $burning
 	 */
-	public function setBurning(bool $burning) : void{
-		$this->burning = $burning;
+	public function setBurning($burning){
+		$this->burning = (bool) $burning;
 	}
 }

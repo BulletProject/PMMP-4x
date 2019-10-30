@@ -19,33 +19,18 @@
  *
 */
 
-declare(strict_types=1);
-
 /**
  * Network-related classes
  */
 namespace pocketmine\network;
 
-/**
- * Advanced network interfaces have some additional capabilities, such as being able to ban addresses and process raw
- * packets.
- */
 interface AdvancedSourceInterface extends SourceInterface{
 
 	/**
-	 * Prevents packets received from the IP address getting processed for the given timeout.
-	 *
 	 * @param string $address
 	 * @param int    $timeout Seconds
 	 */
-	public function blockAddress(string $address, int $timeout = 300);
-
-	/**
-	 * Unblocks a previously-blocked address.
-	 *
-	 * @param string $address
-	 */
-	public function unblockAddress(string $address);
+	public function blockAddress($address, $timeout = 300);
 
 	/**
 	 * @param Network $network
@@ -53,12 +38,10 @@ interface AdvancedSourceInterface extends SourceInterface{
 	public function setNetwork(Network $network);
 
 	/**
-	 * Sends a raw payload to the network interface, bypassing any sessions.
-	 *
 	 * @param string $address
 	 * @param int    $port
 	 * @param string $payload
 	 */
-	public function sendRawPacket(string $address, int $port, string $payload);
+	public function sendRawPacket($address, $port, $payload);
 
 }

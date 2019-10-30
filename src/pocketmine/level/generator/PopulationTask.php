@@ -19,21 +19,24 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\level\generator;
 
-use pocketmine\level\format\Chunk;
+
+use pocketmine\level\format\FullChunk;
+
 use pocketmine\level\Level;
 use pocketmine\level\SimpleChunkManager;
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\Server;
 
+
 class PopulationTask extends AsyncTask{
+
 
 	public $state;
 	public $levelId;
 	public $chunk;
+	public $chunkClass;
 
 	public $chunk0;
 	public $chunk1;
@@ -45,13 +48,20 @@ class PopulationTask extends AsyncTask{
 	public $chunk7;
 	public $chunk8;
 
-	public function __construct(Level $level, Chunk $chunk){
+	public function __construct(Level $level, FullChunk $chunk){
 		$this->state = true;
 		$this->levelId = $level->getId();
-		$this->chunk = $chunk->fastSerialize();
+		$this->chunk = $chunk->toFastBinary();
+		$this->chunkClass = get_class($chunk);
 
-		foreach($level->getAdjacentChunks($chunk->getX(), $chunk->getZ()) as $i => $c){
-			$this->{"chunk$i"} = $c !== null ? $c->fastSerialize() : null;
+		for($i = 0; $i < 9; ++$i){
+			if($i === 4){
+				continue;
+			}
+			$xx = -1 + $i % 3;
+			$zz = -1 + (int) ($i / 3);
+			$ck = $level->getChunk($chunk->getX() + $xx, $chunk->getZ() + $zz, false);
+			$this->{"chunk$i"} = $ck !== null ? $ck->toFastBinary() : null;
 		}
 	}
 
@@ -65,10 +75,12 @@ class PopulationTask extends AsyncTask{
 			return;
 		}
 
-		/** @var Chunk[] $chunks */
+		/** @var FullChunk[] $chunks */
 		$chunks = [];
+		/** @var FullChunk $chunkC */
+		$chunkC = $this->chunkClass;
 
-		$chunk = Chunk::fastDeserialize($this->chunk);
+		$chunk = $chunkC::fromFastBinary($this->chunk);
 
 		for($i = 0; $i < 9; ++$i){
 			if($i === 4){
@@ -78,10 +90,15 @@ class PopulationTask extends AsyncTask{
 			$zz = -1 + (int) ($i / 3);
 			$ck = $this->{"chunk$i"};
 			if($ck === null){
-				$chunks[$i] = new Chunk($chunk->getX() + $xx, $chunk->getZ() + $zz);
+				$chunks[$i] = $chunkC::getEmptyChunk($chunk->getX() + $xx, $chunk->getZ() + $zz);
 			}else{
-				$chunks[$i] = Chunk::fastDeserialize($ck);
+				$chunks[$i] = $chunkC::fromFastBinary($ck);
 			}
+		}
+
+		if($chunk === null){
+			//TODO error
+			return;
 		}
 
 		$manager->setChunk($chunk->getX(), $chunk->getZ(), $chunk);
@@ -105,10 +122,8 @@ class PopulationTask extends AsyncTask{
 
 		$chunk = $manager->getChunk($chunk->getX(), $chunk->getZ());
 		$chunk->recalculateHeightMap();
-		$chunk->populateSkyLight();
-		$chunk->setLightPopulated();
 		$chunk->setPopulated();
-		$this->chunk = $chunk->fastSerialize();
+		$this->chunk = $chunk->toFastBinary();
 
 		$manager->setChunk($chunk->getX(), $chunk->getZ(), null);
 
@@ -131,18 +146,27 @@ class PopulationTask extends AsyncTask{
 				continue;
 			}
 
-			$this->{"chunk$i"} = $chunks[$i] !== null ? $chunks[$i]->fastSerialize() : null;
+			$this->{"chunk$i"} = $chunks[$i] !== null ? $chunks[$i]->toFastBinary() : null;
 		}
 	}
 
 	public function onCompletion(Server $server){
 		$level = $server->getLevel($this->levelId);
 		if($level !== null){
-			if(!$this->state){
-				$level->registerGeneratorToWorker($this->worker->getAsyncWorkerId());
+			if($this->state === false){
+				$level->registerGenerator();
+				return;
 			}
 
-			$chunk = Chunk::fastDeserialize($this->chunk);
+			/** @var FullChunk $chunkC */
+			$chunkC = $this->chunkClass;
+
+			$chunk = $chunkC::fromFastBinary($this->chunk, $level->getProvider());
+
+			if($chunk === null){
+				//TODO error
+				return;
+			}
 
 			for($i = 0; $i < 9; ++$i){
 				if($i === 4){
@@ -150,12 +174,12 @@ class PopulationTask extends AsyncTask{
 				}
 				$c = $this->{"chunk$i"};
 				if($c !== null){
-					$c = Chunk::fastDeserialize($c);
-					$level->generateChunkCallback($c->getX(), $c->getZ(), $this->state ? $c : null);
+					$c = $chunkC::fromFastBinary($c, $level->getProvider());
+					$level->generateChunkCallback($c->getX(), $c->getZ(), $c);
 				}
 			}
 
-			$level->generateChunkCallback($chunk->getX(), $chunk->getZ(), $this->state ? $chunk : null);
+			$level->generateChunkCallback($chunk->getX(), $chunk->getZ(), $chunk);
 		}
 	}
 }

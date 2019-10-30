@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\player;
 
@@ -28,7 +26,8 @@ use pocketmine\event\Cancellable;
 use pocketmine\Player;
 
 class PlayerBedEnterEvent extends PlayerEvent implements Cancellable{
-	/** @var Block */
+	public static $handlerList = null;
+
 	private $bed;
 
 	public function __construct(Player $player, Block $bed){
@@ -36,10 +35,8 @@ class PlayerBedEnterEvent extends PlayerEvent implements Cancellable{
 		$this->bed = $bed;
 	}
 
-	/**
-	 * @return Block
-	 */
-	public function getBed() : Block{
+	public function getBed(){
 		return $this->bed;
 	}
+
 }

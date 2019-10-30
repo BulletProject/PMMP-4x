@@ -19,39 +19,44 @@
  *
 */
 
-declare(strict_types=1);
+/*IMPORTANT NOTE This command is overridden in LbComponents, change code there*/
 
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\InvalidCommandSyntaxException;
-use pocketmine\lang\TranslationContainer;
 use pocketmine\Player;
 use pocketmine\utils\TextFormat;
-use function count;
-use function implode;
 
 class MeCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.me.description",
-			"%commands.me.usage"
+			"Performs the specified action in chat",
+			"/me <action...>"
 		);
 		$this->setPermission("pocketmine.command.me");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(!$this->testPermission($sender)){
 			return true;
 		}
 
 		if(count($args) === 0){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
+
+			return false;
 		}
 
-		$sender->getServer()->broadcastMessage(new TranslationContainer("chat.type.emote", [$sender instanceof Player ? $sender->getDisplayName() : $sender->getName(), TextFormat::WHITE . implode(" ", $args)]));
+		$message = "* ";
+		if($sender instanceof Player){
+			$message .= $sender->getDisplayName();
+		}else{
+			$message .= $sender->getName();
+		}
+
+		$sender->getServer()->broadcastMessage($message . " " . implode(" ", $args));
 
 		return true;
 	}

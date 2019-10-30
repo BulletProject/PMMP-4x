@@ -14,39 +14,34 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
-
-
-namespace pocketmine\event\level;
-
-use pocketmine\level\format\Chunk;
-use pocketmine\level\Level;
+ */
 
 /**
- * Chunk-related events
+ * Level related events
  */
+namespace pocketmine\event\level;
+
+use pocketmine\level\format\FullChunk;
+
 abstract class ChunkEvent extends LevelEvent{
-	/** @var Chunk */
+	/** @var FullChunk */
 	private $chunk;
 
 	/**
-	 * @param Level $level
-	 * @param Chunk $chunk
+	 * @param FullChunk $chunk
 	 */
-	public function __construct(Level $level, Chunk $chunk){
-		parent::__construct($level);
+	public function __construct(FullChunk $chunk){
+		parent::__construct($chunk->getProvider()->getLevel());
 		$this->chunk = $chunk;
 	}
 
 	/**
-	 * @return Chunk
+	 * @return FullChunk
 	 */
-	public function getChunk() : Chunk{
+	public function getChunk(){
 		return $this->chunk;
 	}
 }

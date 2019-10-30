@@ -14,54 +14,51 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\player;
 
 use pocketmine\event\Cancellable;
 use pocketmine\level\Location;
 use pocketmine\Player;
+use pocketmine\network\protocol\AnimatePacket;
+use pocketmine\math\Vector3;
 
 class PlayerMoveEvent extends PlayerEvent implements Cancellable{
-	/** @var Location */
+	public static $handlerList = null;
+
 	private $from;
-	/** @var Location */
 	private $to;
 
-	/**
-	 * @param Player   $player
-	 * @param Location $from
-	 * @param Location $to
-	 */
 	public function __construct(Player $player, Location $from, Location $to){
 		$this->player = $player;
 		$this->from = $from;
 		$this->to = $to;
+		if($player->getDataFlag($player::DATA_PLAYER_FLAGS, $player::DATA_PLAYER_FLAG_SLEEP)){
+			$block = $from->level->getBlock(new Vector3(floor($from->getX()), ceil($from->getY()), floor($from->getZ())));
+			$blockUp = $from->level->getBlock(new Vector3(floor($from->getX()), ceil($from->getY()+1), floor($from->getZ())));
+			if($block->getId() != 26 && $blockUp->getId() != 26){
+				$player->stopSleep();
+			}
+		}
 	}
 
-	/**
-	 * @return Location
-	 */
-	public function getFrom() : Location{
+	public function getFrom(){
 		return $this->from;
 	}
 
-	/**
-	 * @return Location
-	 */
-	public function getTo() : Location{
+	public function setFrom(Location $from){
+		$this->from = $from;
+	}
+
+	public function getTo(){
 		return $this->to;
 	}
 
-	/**
-	 * @param Location $to
-	 */
-	public function setTo(Location $to) : void{
+	public function setTo(Location $to){
 		$this->to = $to;
 	}
 }

@@ -10,15 +10,12 @@ build_script:
 
     git submodule update
 
-    ./bin/composer.bat config -g github-oauth.github.com %MY_VARIABLE%
-
-    ./bin/composer.bat update
     
     rm -rf artifacts
     
     mkdir artifacts
 
-    C:\projects\pmmp-4x\bin\php\php.exe -d disable_functions=chmod -dphar.readonly=0 PocketMine-DevTools\src\DevTools\ConsoleScript.php --make src,vendor,resources --relative ./ --entry src/pocketmine/PocketMine.php --out artifacts/pmmpAPI3.phar
+    C:\projects\pmmp-4x\bin\php\php.exe -d disable_functions=chmod -dphar.readonly=0 PocketMine-DevTools\src\DevTools\ConsoleScript.php --make src,vendor,resources --relative ./ --entry src/pocketmine/PocketMine.php --out artifacts/steadfast2API3.phar
 
 artifacts:
-- path: artifacts/pmmpAPI3.phar
+- path: artifacts/steadfast2API3.phar

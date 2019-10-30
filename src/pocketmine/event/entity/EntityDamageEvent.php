@@ -1,6 +1,6 @@
 <?php
 
-/*
+/**
  *
  *  ____            _        _   __  __ _                  __  __ ____
  * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
@@ -14,154 +14,176 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\entity;
 
+use pocketmine\entity\Effect;
 use pocketmine\entity\Entity;
 use pocketmine\event\Cancellable;
-use function array_sum;
+use pocketmine\Player;
+use pocketmine\item\enchantment\Enchantment;
 
-/**
- * Called when an entity takes damage.
- */
 class EntityDamageEvent extends EntityEvent implements Cancellable{
-	public const MODIFIER_ARMOR = 1;
-	public const MODIFIER_STRENGTH = 2;
-	public const MODIFIER_WEAKNESS = 3;
-	public const MODIFIER_RESISTANCE = 4;
-	public const MODIFIER_ABSORPTION = 5;
-	public const MODIFIER_ARMOR_ENCHANTMENTS = 6;
-	public const MODIFIER_CRITICAL = 7;
-	public const MODIFIER_TOTEM = 8;
-	public const MODIFIER_WEAPON_ENCHANTMENTS = 9;
+	public static $handlerList = null;
 
-	public const CAUSE_CONTACT = 0;
-	public const CAUSE_ENTITY_ATTACK = 1;
-	public const CAUSE_PROJECTILE = 2;
-	public const CAUSE_SUFFOCATION = 3;
-	public const CAUSE_FALL = 4;
-	public const CAUSE_FIRE = 5;
-	public const CAUSE_FIRE_TICK = 6;
-	public const CAUSE_LAVA = 7;
-	public const CAUSE_DROWNING = 8;
-	public const CAUSE_BLOCK_EXPLOSION = 9;
-	public const CAUSE_ENTITY_EXPLOSION = 10;
-	public const CAUSE_VOID = 11;
-	public const CAUSE_SUICIDE = 12;
-	public const CAUSE_MAGIC = 13;
-	public const CAUSE_CUSTOM = 14;
-	public const CAUSE_STARVATION = 15;
+	const MODIFIER_BASE = 0;
+	const MODIFIER_ARMOR = 1;
+	const MODIFIER_STRENGTH = 2;
+	const MODIFIER_WEAKNESS = 3;
+	const MODIFIER_RESISTANCE = 4;
+	// attack effect modifiers
+	const MODIFIER_EFFECT_SHARPNESS = 5;
+	const MODIFIER_EFFECT_SMITE = 6;
+	const MODIFIER_EFFECT_ARTHROPODOS = 7;
+	const MODIFIER_EFFECT_KNOCKBACK = 8;
+	// defence effect modifiers
+	const MODIFIER_EFFECT_PROTECTION = 9;
+	const MODIFIER_EFFECT_FIRE_PROTECTION = 10;
+	const MODIFIER_EFFECT_BLAST_PROTECTION = 11;
+	const MODIFIER_EFFECT_PROJECTILE_PROTECTION = 12;
+	const MODIFIER_EFFECT_FALL_PROTECTION = 13;
+	const MODIFIER_CRITICAL = 14;
 
-	/** @var int */
+	
+	const CAUSE_ENTITY_ATTACK = 1;
+	const CAUSE_PROJECTILE = 2;
+	const CAUSE_SUFFOCATION = 3;
+	const CAUSE_FALL = 4;
+	const CAUSE_FIRE = 5;
+	const CAUSE_FIRE_TICK = 6;
+	const CAUSE_LAVA = 7;
+	const CAUSE_DROWNING = 8;
+	const CAUSE_BLOCK_EXPLOSION = 9;
+	const CAUSE_ENTITY_EXPLOSION = 10;
+	const CAUSE_VOID = 11;
+	const CAUSE_SUICIDE = 12;
+	const CAUSE_MAGIC = 13;
+	const CAUSE_CUSTOM = 14;
+	const CAUSE_CONTACT = 15;
+	const CAUSE_HUNGER = 16;
+
+
 	private $cause;
-	/** @var float */
-	private $baseDamage;
-	/** @var float */
-	private $originalBase;
-
-	/** @var float[] */
+	/** @var array */
 	private $modifiers;
-	/** @var float[] */
 	private $originals;
-
-	/** @var int */
-	private $attackCooldown = 10;
 
 
 	/**
-	 * @param Entity  $entity
-	 * @param int     $cause
-	 * @param float   $damage
-	 * @param float[] $modifiers
+	 * @param Entity    $entity
+	 * @param int       $cause
+	 * @param int|int[] $damage
+	 *
+	 * @throws \Exception
 	 */
-	public function __construct(Entity $entity, int $cause, float $damage, array $modifiers = []){
+	public function __construct(Entity $entity, $cause, $damage){
 		$this->entity = $entity;
 		$this->cause = $cause;
-		$this->baseDamage = $this->originalBase = $damage;
+		if(is_array($damage)){
+			$this->modifiers = $damage;
+		}else{
+			$this->modifiers = [
+				self::MODIFIER_BASE => $damage
+			];
+		}
 
-		$this->modifiers = $modifiers;
 		$this->originals = $this->modifiers;
+
+		if(!isset($this->modifiers[self::MODIFIER_BASE])){
+			throw new \InvalidArgumentException("BASE Damage modifier missing");
+		}
+
+		if($entity->hasEffect(Effect::DAMAGE_RESISTANCE)){
+			$this->setDamage(-($this->getDamage(self::MODIFIER_BASE) * 0.20 * ($entity->getEffect(Effect::DAMAGE_RESISTANCE)->getAmplifier() + 1)), self::MODIFIER_RESISTANCE);
+		}
+		
+		if ($entity instanceof Player && $cause !== self::CAUSE_VOID) {
+			$enchantments = $entity->getProtectionEnchantments();
+			if (!is_null($enchantments[Enchantment::TYPE_ARMOR_PROTECTION])) {			
+				$armorProtection = $enchantments[Enchantment::TYPE_ARMOR_PROTECTION];
+				$dmg = max(0, (isset($this->modifiers[self::MODIFIER_BASE]) ? $this->modifiers[self::MODIFIER_BASE] : 0) + (isset($this->modifiers[self::MODIFIER_ARMOR]) ? $this->modifiers[self::MODIFIER_ARMOR] : 0));
+				$this->setDamage(-1 * $dmg * $armorProtection, self::MODIFIER_EFFECT_PROTECTION);
+			}
+			
+			$enchantment = null;
+			$multiplier = 2;
+			$modifierId = 0;
+			switch($cause) {
+				case self::CAUSE_FIRE:
+				case self::CAUSE_FIRE_TICK:
+				case self::CAUSE_LAVA:
+					$enchantment = $enchantments[Enchantment::TYPE_ARMOR_FIRE_PROTECTION];
+					$multiplier = 2;
+					$modifierId = self::MODIFIER_EFFECT_FIRE_PROTECTION;
+					break;
+				case self::CAUSE_FALL:
+					$enchantment = $enchantments[Enchantment::TYPE_ARMOR_FALL_PROTECTION];
+					$multiplier = 3;
+					$modifierId = self::MODIFIER_EFFECT_FALL_PROTECTION;
+					break;
+				case self::CAUSE_ENTITY_EXPLOSION:
+				case self::CAUSE_BLOCK_EXPLOSION:
+					$enchantment = $enchantments[Enchantment::TYPE_ARMOR_EXPLOSION_PROTECTION];
+					$multiplier = 2;
+					$modifierId = self::MODIFIER_EFFECT_BLAST_PROTECTION;
+					break;
+				case self::CAUSE_PROJECTILE:
+					$enchantment = $enchantments[Enchantment::TYPE_ARMOR_PROJECTILE_PROTECTION];
+					$multiplier = 2;
+					$modifierId = self::MODIFIER_EFFECT_PROJECTILE_PROTECTION;
+					break;
+			}
+			
+			if (!is_null($enchantment)) {
+				$this->setDamage(-1 * $enchantment->getLevel() * $multiplier, $modifierId);
+			}
+		}
 	}
 
 	/**
 	 * @return int
 	 */
-	public function getCause() : int{
+	public function getCause(){
 		return $this->cause;
 	}
 
 	/**
-	 * Returns the base amount of damage applied, before modifiers.
+	 * @param int $type
 	 *
-	 * @return float
+	 * @return int
 	 */
-	public function getBaseDamage() : float{
-		return $this->baseDamage;
-	}
+	public function getOriginalDamage($type = self::MODIFIER_BASE){
+		if(isset($this->originals[$type])){
+			return $this->originals[$type];
+		}
 
-	/**
-	 * Sets the base amount of damage applied, optionally recalculating modifiers.
-	 *
-	 * TODO: add ability to recalculate modifiers when this is set
-	 *
-	 * @param float $damage
-	 */
-	public function setBaseDamage(float $damage) : void{
-		$this->baseDamage = $damage;
-	}
-
-	/**
-	 * Returns the original base amount of damage applied, before alterations by plugins.
-	 *
-	 * @return float
-	 */
-	public function getOriginalBaseDamage() : float{
-		return $this->originalBase;
-	}
-
-	/**
-	 * @return float[]
-	 */
-	public function getOriginalModifiers() : array{
-		return $this->originals;
+		return 0;
 	}
 
 	/**
 	 * @param int $type
 	 *
-	 * @return float
+	 * @return int
 	 */
-	public function getOriginalModifier(int $type) : float{
-		return $this->originals[$type] ?? 0.0;
-	}
+	public function getDamage($type = self::MODIFIER_BASE){
+		if(isset($this->modifiers[$type])){
+			return $this->modifiers[$type];
+		}
 
-	/**
-	 * @return float[]
-	 */
-	public function getModifiers() : array{
-		return $this->modifiers;
-	}
-
-	/**
-	 * @param int $type
-	 *
-	 * @return float
-	 */
-	public function getModifier(int $type) : float{
-		return $this->modifiers[$type] ?? 0.0;
+		return 0;
 	}
 
 	/**
 	 * @param float $damage
 	 * @param int   $type
+	 *
+	 * @throws \UnexpectedValueException
 	 */
-	public function setModifier(float $damage, int $type) : void{
+	public function setDamage($damage, $type = self::MODIFIER_BASE){
 		$this->modifiers[$type] = $damage;
 	}
 
@@ -170,55 +192,20 @@ class EntityDamageEvent extends EntityEvent implements Cancellable{
 	 *
 	 * @return bool
 	 */
-	public function isApplicable(int $type) : bool{
+	public function isApplicable($type){
 		return isset($this->modifiers[$type]);
 	}
 
 	/**
-	 * @return float
-	 */
-	public function getFinalDamage() : float{
-		return $this->baseDamage + array_sum($this->modifiers);
-	}
-
-	/**
-	 * Returns whether an entity can use armour points to reduce this type of damage.
-	 * @return bool
-	 */
-	public function canBeReducedByArmor() : bool{
-		switch($this->cause){
-			case self::CAUSE_FIRE_TICK:
-			case self::CAUSE_SUFFOCATION:
-			case self::CAUSE_DROWNING:
-			case self::CAUSE_STARVATION:
-			case self::CAUSE_FALL:
-			case self::CAUSE_VOID:
-			case self::CAUSE_MAGIC:
-			case self::CAUSE_SUICIDE:
-				return false;
-
-		}
-
-		return true;
-	}
-
-	/**
-	 * Returns the cooldown in ticks before the target entity can be attacked again.
-	 *
 	 * @return int
 	 */
-	public function getAttackCooldown() : int{
-		return $this->attackCooldown;
+	public function getFinalDamage(){
+		$damage = 0;
+		foreach($this->modifiers as $type => $d){
+			$damage += $d;
+		}
+
+		return max($damage, 0);
 	}
 
-	/**
-	 * Sets the cooldown in ticks before the target entity can be attacked again.
-	 *
-	 * NOTE: This value is not used in non-Living entities
-	 *
-	 * @param int $attackCooldown
-	 */
-	public function setAttackCooldown(int $attackCooldown) : void{
-		$this->attackCooldown = $attackCooldown;
-	}
 }

@@ -1,6 +1,6 @@
 <?php
 
-/*
+/**
  *
  *  ____            _        _   __  __ _                  __  __ ____
  * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
@@ -14,36 +14,37 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\inventory;
 
-use pocketmine\entity\object\ItemEntity;
+use pocketmine\entity\Item;
 use pocketmine\event\Cancellable;
 use pocketmine\inventory\Inventory;
 
 class InventoryPickupItemEvent extends InventoryEvent implements Cancellable{
-	/** @var ItemEntity */
+	public static $handlerList = null;
+
+	/** @var Item */
 	private $item;
 
 	/**
-	 * @param Inventory  $inventory
-	 * @param ItemEntity $item
+	 * @param Inventory $inventory
+	 * @param Item      $item
 	 */
-	public function __construct(Inventory $inventory, ItemEntity $item){
+	public function __construct(Inventory $inventory, Item $item){
 		$this->item = $item;
 		parent::__construct($inventory);
 	}
 
 	/**
-	 * @return ItemEntity
+	 * @return Item
 	 */
-	public function getItem() : ItemEntity{
+	public function getItem(){
 		return $this->item;
 	}
+
 }

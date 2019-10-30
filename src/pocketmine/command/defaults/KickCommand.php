@@ -19,39 +19,33 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\InvalidCommandSyntaxException;
-use pocketmine\lang\TranslationContainer;
 use pocketmine\Player;
 use pocketmine\utils\TextFormat;
-use function array_shift;
-use function count;
-use function implode;
-use function trim;
 
 class KickCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.kick.description",
-			"%commands.kick.usage"
+			"Removes the specified player from the server",
+			"/kick <player> [reason...]"
 		);
 		$this->setPermission("pocketmine.command.kick");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(!$this->testPermission($sender)){
 			return true;
 		}
 
 		if(count($args) === 0){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
+
+			return false;
 		}
 
 		$name = array_shift($args);
@@ -59,13 +53,13 @@ class KickCommand extends VanillaCommand{
 
 		if(($player = $sender->getServer()->getPlayer($name)) instanceof Player){
 			$player->kick($reason);
-			if($reason !== ""){
-				Command::broadcastCommandMessage($sender, new TranslationContainer("commands.kick.success.reason", [$player->getName(), $reason]));
+			if(strlen($reason) >= 1){
+				Command::broadcastCommandMessage($sender, "Kicked " . $player->getName() . " from the game: '{$reason}'");
 			}else{
-				Command::broadcastCommandMessage($sender, new TranslationContainer("commands.kick.success", [$player->getName()]));
+				Command::broadcastCommandMessage($sender, "Kicked " . $player->getName() . " from the game.");
 			}
 		}else{
-			$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.player.notFound"));
+			$sender->sendMessage($name . " not found.");
 		}
 
 

@@ -19,13 +19,10 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\plugin;
 
 use LogLevel;
 use pocketmine\Server;
-use function spl_object_hash;
 
 class PluginLogger implements \AttachableLogger{
 

@@ -14,15 +14,13 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 /**
- * Events related to the server core, like networking, stop, console commands
+ * Events related to the server core, like networking, stop, level loading
  */
 namespace pocketmine\event\server;
 

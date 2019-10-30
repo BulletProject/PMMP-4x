@@ -19,31 +19,20 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\InvalidCommandSyntaxException;
-use pocketmine\lang\TranslationContainer;
-use pocketmine\utils\TextFormat;
-use function is_numeric;
-use function substr;
 
 abstract class VanillaCommand extends Command{
-	public const MAX_COORD = 30000000;
-	public const MIN_COORD = -30000000;
+	const MAX_COORD = 30000000;
+	const MIN_COORD = -30000000;
 
-	/**
-	 * @param CommandSender $sender
-	 * @param mixed         $value
-	 * @param int           $min
-	 * @param int           $max
-	 *
-	 * @return int
-	 */
-	protected function getInteger(CommandSender $sender, $value, int $min = self::MIN_COORD, int $max = self::MAX_COORD) : int{
+	public function __construct($name, $description = "", $usageMessage = null, array $aliases = []){
+		parent::__construct($name, $description, $usageMessage, $aliases);
+	}
+
+	protected function getInteger(CommandSender $sender, $value, $min = self::MIN_COORD, $max = self::MAX_COORD){
 		$i = (int) $value;
 
 		if($i < $min){
@@ -55,17 +44,8 @@ abstract class VanillaCommand extends Command{
 		return $i;
 	}
 
-	/**
-	 * @param float         $original
-	 * @param CommandSender $sender
-	 * @param string        $input
-	 * @param float         $min
-	 * @param float         $max
-	 *
-	 * @return float
-	 */
-	protected function getRelativeDouble(float $original, CommandSender $sender, string $input, float $min = self::MIN_COORD, float $max = self::MAX_COORD) : float{
-		if($input[0] === "~"){
+	protected function getRelativeDouble($original, CommandSender $sender, $input, $min = self::MIN_COORD, $max = self::MAX_COORD){
+		if($input{0} === "~"){
 			$value = $this->getDouble($sender, substr($input, 1));
 
 			return $original + $value;
@@ -74,15 +54,7 @@ abstract class VanillaCommand extends Command{
 		return $this->getDouble($sender, $input, $min, $max);
 	}
 
-	/**
-	 * @param CommandSender $sender
-	 * @param mixed         $value
-	 * @param float         $min
-	 * @param float         $max
-	 *
-	 * @return float
-	 */
-	protected function getDouble(CommandSender $sender, $value, float $min = self::MIN_COORD, float $max = self::MAX_COORD) : float{
+	protected function getDouble(CommandSender $sender, $value, $min = self::MIN_COORD, $max = self::MAX_COORD){
 		$i = (double) $value;
 
 		if($i < $min){
@@ -92,23 +64,5 @@ abstract class VanillaCommand extends Command{
 		}
 
 		return $i;
-	}
-
-	protected function getBoundedInt(CommandSender $sender, string $input, int $min, int $max) : ?int{
-		if(!is_numeric($input)){
-			throw new InvalidCommandSyntaxException();
-		}
-
-		$v = (int) $input;
-		if($v > $max){
-			$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.num.tooBig", [$input, (string) $max]));
-			return null;
-		}
-		if($v < $min){
-			$sender->sendMessage(new TranslationContainer(TextFormat::RED . "%commands.generic.num.tooSmall", [$input, (string) $min]));
-			return null;
-		}
-
-		return $v;
 	}
 }

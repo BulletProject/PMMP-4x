@@ -14,99 +14,102 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\player;
 
 use pocketmine\block\Block;
-use pocketmine\block\BlockFactory;
 use pocketmine\event\Cancellable;
 use pocketmine\item\Item;
 use pocketmine\level\Position;
 use pocketmine\math\Vector3;
 use pocketmine\Player;
-use function assert;
+use pocketmine\item\Armor;
 
 /**
  * Called when a player interacts or touches a block (including air?)
  */
 class PlayerInteractEvent extends PlayerEvent implements Cancellable{
-	public const LEFT_CLICK_BLOCK = 0;
-	public const RIGHT_CLICK_BLOCK = 1;
-	public const LEFT_CLICK_AIR = 2;
-	public const RIGHT_CLICK_AIR = 3;
-	public const PHYSICAL = 4;
+	public static $handlerList = null;
 
-	/** @var Block */
+	const LEFT_CLICK_BLOCK = 0;
+	const RIGHT_CLICK_BLOCK = 1;
+	const LEFT_CLICK_AIR = 2;
+	const RIGHT_CLICK_AIR = 3;
+	const PHYSICAL = 4;
+
+	/**
+	 * @var \pocketmine\block\Block;
+	 */
 	protected $blockTouched;
 
-	/** @var Vector3 */
 	protected $touchVector;
 
 	/** @var int */
 	protected $blockFace;
 
-	/** @var Item */
+	/** @var \pocketmine\item\Item */
 	protected $item;
 
-	/** @var int */
 	protected $action;
 
-	/**
-	 * @param Player       $player
-	 * @param Item         $item
-	 * @param Block|null   $block
-	 * @param Vector3|null $touchVector
-	 * @param int          $face
-	 * @param int          $action
-	 */
-	public function __construct(Player $player, Item $item, ?Block $block, ?Vector3 $touchVector, int $face, int $action = PlayerInteractEvent::RIGHT_CLICK_BLOCK){
-		assert($block !== null or $touchVector !== null);
+	public function __construct(Player $player, Item $item, Vector3 $block, $face, $action = PlayerInteractEvent::RIGHT_CLICK_BLOCK){
+		if($block instanceof Block){
+			$this->blockTouched = $block;
+			$this->touchVector = new Vector3(0, 0, 0);
+		}else{
+			$this->touchVector = $block;
+			$this->blockTouched = Block::get(0, 0, new Position(0, 0, 0, $player->level));
+		}
 		$this->player = $player;
 		$this->item = $item;
-		$this->blockTouched = $block ?? BlockFactory::get(0, 0, new Position(0, 0, 0, $player->level));
-		$this->touchVector = $touchVector ?? new Vector3(0, 0, 0);
-		$this->blockFace = $face;
-		$this->action = $action;
+		$this->blockFace = (int) $face;
+		$this->action = (int) $action;
+		if($item instanceof Armor){
+			if($player->getInventory()->getArmorItem($item::SLOT_NUMBER)->getId() == Item::AIR){
+				$player->getInventory()->setItem($player->getInventory()->getHeldItemSlot(), Item::get(Item::AIR));
+				$player->getInventory()->setArmorItem($item::SLOT_NUMBER, $item);
+				$player->getInventory()->sendArmorContents($player);
+				$player->getInventory()->sendContents($player);
+			}
+		}
 	}
 
 	/**
 	 * @return int
 	 */
-	public function getAction() : int{
+	public function getAction(){
 		return $this->action;
 	}
 
 	/**
 	 * @return Item
 	 */
-	public function getItem() : Item{
+	public function getItem(){
 		return $this->item;
 	}
 
 	/**
 	 * @return Block
 	 */
-	public function getBlock() : Block{
+	public function getBlock(){
 		return $this->blockTouched;
 	}
 
 	/**
 	 * @return Vector3
 	 */
-	public function getTouchVector() : Vector3{
+	public function getTouchVector(){
 		return $this->touchVector;
 	}
 
 	/**
 	 * @return int
 	 */
-	public function getFace() : int{
+	public function getFace(){
 		return $this->blockFace;
 	}
 }

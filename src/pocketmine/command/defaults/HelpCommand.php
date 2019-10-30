@@ -19,39 +19,27 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\lang\TranslationContainer;
+use pocketmine\command\ConsoleCommandSender;
+use pocketmine\command\PluginCommand;
 use pocketmine\utils\TextFormat;
-use function array_chunk;
-use function array_pop;
-use function count;
-use function explode;
-use function implode;
-use function is_numeric;
-use function ksort;
-use function min;
-use function strtolower;
-use const SORT_FLAG_CASE;
-use const SORT_NATURAL;
 
 class HelpCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.help.description",
-			"%commands.help.usage",
+			"Shows the help menu",
+			"/help [pageNumber]\n/help <topic> [pageNumber]",
 			["?"]
 		);
 		$this->setPermission("pocketmine.command.help");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(!$this->testPermission($sender)){
 			return true;
 		}
@@ -70,33 +58,41 @@ class HelpCommand extends VanillaCommand{
 			$pageNumber = 1;
 		}
 
-		$pageHeight = $sender->getScreenLineHeight();
+		if($sender instanceof ConsoleCommandSender){
+			$pageHeight = PHP_INT_MAX;
+		}else{
+			$pageHeight = 10;
+		}
 
 		if($command === ""){
 			/** @var Command[][] $commands */
 			$commands = [];
 			foreach($sender->getServer()->getCommandMap()->getCommands() as $command){
-				if($command->testPermissionSilent($sender)){
+				if($command->testPermissionSilent($sender) && $command->isAvailableForHelp()){
 					$commands[$command->getName()] = $command;
 				}
 			}
-			ksort($commands, SORT_NATURAL | SORT_FLAG_CASE);
+//			ksort($commands, SORT_NATURAL | SORT_FLAG_CASE);
+			usort($commands, array('pocketmine\command\defaults\HelpCommand', 'pluginSort'));
 			$commands = array_chunk($commands, $pageHeight);
 			$pageNumber = (int) min(count($commands), $pageNumber);
 			if($pageNumber < 1){
 				$pageNumber = 1;
 			}
-			$sender->sendMessage(new TranslationContainer("commands.help.header", [$pageNumber, count($commands)]));
+			$message = TextFormat::RED . "-" . TextFormat::RESET . " Showing help page " . $pageNumber . " of " . count($commands) . " (/help <pageNumber>) " . TextFormat::RED . "-" . TextFormat::RESET . "\n";
 			if(isset($commands[$pageNumber - 1])){
 				foreach($commands[$pageNumber - 1] as $command){
-					$sender->sendMessage(TextFormat::DARK_GREEN . "/" . $command->getName() . ": " . TextFormat::WHITE . $command->getDescription());
+					if($command->getName() != "admin"){
+						$message .= TextFormat::DARK_GREEN . "/" . $command->getName() . ": " . TextFormat::WHITE . $command->getDescription() . "\n";
+					}
 				}
 			}
+			$sender->sendMessage($message);
 
 			return true;
 		}else{
 			if(($cmd = $sender->getServer()->getCommandMap()->getCommand(strtolower($command))) instanceof Command){
-				if($cmd->testPermissionSilent($sender)){
+				if($cmd->testPermissionSilent($sender) && $cmd->isAvailableForHelp()){
 					$message = TextFormat::YELLOW . "--------- " . TextFormat::WHITE . " Help: /" . $cmd->getName() . TextFormat::YELLOW . " ---------\n";
 					$message .= TextFormat::GOLD . "Description: " . TextFormat::WHITE . $cmd->getDescription() . "\n";
 					$message .= TextFormat::GOLD . "Usage: " . TextFormat::WHITE . implode("\n" . TextFormat::WHITE, explode("\n", $cmd->getUsage())) . "\n";
@@ -110,4 +106,37 @@ class HelpCommand extends VanillaCommand{
 			return true;
 		}
 	}
+	
+	/**
+	 * Sort commands by plugin (game plugin first, then LbCore, then SteadFast
+	 * @param PluginCommand $a
+	 * @param PluginCommand $b
+	 * @return int
+	 */
+	public static function pluginSort($a, $b) {
+		$aIsPlugin = $a instanceof PluginCommand;
+		$bIsPlugin = $b instanceof PluginCommand;
+		if ($aIsPlugin) {
+			if ($bIsPlugin) {
+				$aPlugin = $a->getPlugin()->getName();
+				$bPlugin = $b->getPlugin()->getName();
+				if ($aPlugin !== $bPlugin) {
+					if ($aPlugin == 'LbCore') {
+						return 1;
+					} elseif ($bPlugin == 'LbCore') {
+						return -1;
+					}
+				}
+			} else {
+				return -1;
+			}
+		} elseif ($bIsPlugin) {
+			return 1;
+		}
+		//if $a from the same plugin as $b sort by a-z
+		$aName = $a->getName();
+		$bName = $b->getName();
+		return strcmp($aName, $bName);
+	}
+
 }

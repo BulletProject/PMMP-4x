@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,156 +15,89 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\block;
 
+use pocketmine\entity\Effect;
 use pocketmine\entity\Entity;
-use pocketmine\entity\projectile\Arrow;
-use pocketmine\event\block\BlockBurnEvent;
 use pocketmine\event\entity\EntityCombustByBlockEvent;
 use pocketmine\event\entity\EntityDamageByBlockEvent;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\item\Item;
-use pocketmine\math\Vector3;
-use function min;
-use function mt_rand;
+use pocketmine\level\Level;
+use pocketmine\Server;
 
 class Fire extends Flowable{
 
 	protected $id = self::FIRE;
 
-	public function __construct(int $meta = 0){
+	public function __construct($meta = 0){
 		$this->meta = $meta;
 	}
 
-	public function hasEntityCollision() : bool{
+	public function hasEntityCollision(){
 		return true;
 	}
 
-	public function getName() : string{
+	public function getName(){
 		return "Fire Block";
 	}
 
-	public function getLightLevel() : int{
+	public function getLightLevel(){
 		return 15;
 	}
 
-	public function isBreakable(Item $item) : bool{
+	public function isBreakable(Item $item){
 		return false;
 	}
 
-	public function canBeReplaced() : bool{
+	public function canBeReplaced(){
 		return true;
 	}
 
-	public function onEntityCollide(Entity $entity) : void{
-		$ev = new EntityDamageByBlockEvent($this, $entity, EntityDamageEvent::CAUSE_FIRE, 1);
-		$entity->attack($ev);
+	public function onEntityCollide(Entity $entity){
+		if(!$entity->hasEffect(Effect::FIRE_RESISTANCE)){
+			$ev = new EntityDamageByBlockEvent($this, $entity, EntityDamageEvent::CAUSE_FIRE, 1);
+			$entity->attack($ev->getFinalDamage(), $ev);
+		}
 
 		$ev = new EntityCombustByBlockEvent($this, $entity, 8);
-		if($entity instanceof Arrow){
-			$ev->setCancelled();
-		}
-		$ev->call();
+		Server::getInstance()->getPluginManager()->callEvent($ev);
 		if(!$ev->isCancelled()){
 			$entity->setOnFire($ev->getDuration());
 		}
 	}
 
-	public function getDropsForCompatibleTool(Item $item) : array{
+	public function getDrops(Item $item){
 		return [];
 	}
 
-	public function onNearbyBlockChange() : void{
-		if(!$this->getSide(Vector3::SIDE_DOWN)->isSolid() and !$this->hasAdjacentFlammableBlocks()){
-			$this->getLevel()->setBlock($this, BlockFactory::get(Block::AIR), true);
-		}else{
-			$this->level->scheduleDelayedBlockUpdate($this, mt_rand(30, 40));
-		}
-	}
-
-	public function ticksRandomly() : bool{
-		return true;
-	}
-
-	public function onRandomTick() : void{
-		$down = $this->getSide(Vector3::SIDE_DOWN);
-
-		$result = null;
-		if($this->meta < 15 and mt_rand(0, 2) === 0){
-			$this->meta++;
-			$result = $this;
-		}
-		$canSpread = true;
-
-		if(!$down->burnsForever()){
-			//TODO: check rain
-			if($this->meta === 15){
-				if(!$down->isFlammable() and mt_rand(0, 3) === 3){ //1/4 chance to extinguish
-					$canSpread = false;
-					$result = BlockFactory::get(Block::AIR);
-				}
-			}elseif(!$this->hasAdjacentFlammableBlocks()){
-				$canSpread = false;
-				if(!$down->isSolid() or $this->meta > 3){ //fire older than 3, or without a solid block below
-					$result = BlockFactory::get(Block::AIR);
+	public function onUpdate($type){
+		if($type === Level::BLOCK_UPDATE_NORMAL){
+			for($s = 0; $s <= 5; ++$s){
+				$side = $this->getSide($s);
+				if($side->getId() !== self::AIR and !($side instanceof Liquid)){
+					return false;
 				}
 			}
-		}
+			$this->getLevel()->setBlock($this, new Air(), true);
 
-		if($result !== null){
-			$this->level->setBlock($this, $result);
-		}
+			return Level::BLOCK_UPDATE_NORMAL;
+		}elseif($type === Level::BLOCK_UPDATE_RANDOM){
+			if($this->getSide(0)->getId() !== self::NETHERRACK){
+				$this->getLevel()->setBlock($this, new Air(), true);
 
-		$this->level->scheduleDelayedBlockUpdate($this, mt_rand(30, 40));
-
-		if($canSpread){
-			//TODO: raise upper bound for chance in humid biomes
-
-			foreach($this->getHorizontalSides() as $side){
-				$this->burnBlock($side, 300);
+				return Level::BLOCK_UPDATE_NORMAL;
 			}
-
-			//vanilla uses a 250 upper bound here, but I don't think they intended to increase the chance of incineration
-			$this->burnBlock($this->getSide(Vector3::SIDE_UP), 350);
-			$this->burnBlock($this->getSide(Vector3::SIDE_DOWN), 350);
-
-			//TODO: fire spread
-		}
-	}
-
-	public function onScheduledUpdate() : void{
-		$this->onRandomTick();
-	}
-
-	private function hasAdjacentFlammableBlocks() : bool{
-		for($i = 0; $i <= 5; ++$i){
-			if($this->getSide($i)->isFlammable()){
-				return true;
-			}
+		}elseif($type === Level::BLOCK_UPDATE_TOUCH) {
+			$this->getLevel()->setBlock($this, new Air(), true);
+			return Level::BLOCK_UPDATE_NORMAL;
 		}
 
 		return false;
 	}
 
-	private function burnBlock(Block $block, int $chanceBound) : void{
-		if(mt_rand(0, $chanceBound) < $block->getFlammability()){
-			$ev = new BlockBurnEvent($block, $this);
-			$ev->call();
-			if(!$ev->isCancelled()){
-				$block->onIncinerate();
-
-				if(mt_rand(0, $this->meta + 9) < 5){ //TODO: check rain
-					$this->level->setBlock($block, BlockFactory::get(Block::FIRE, min(15, $this->meta + (mt_rand(0, 4) >> 2))));
-				}else{
-					$this->level->setBlock($block, BlockFactory::get(Block::AIR));
-				}
-			}
-		}
-	}
 }

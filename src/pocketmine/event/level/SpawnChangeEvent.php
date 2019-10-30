@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\level;
 
@@ -31,6 +29,8 @@ use pocketmine\level\Position;
  * The previous spawn is included
  */
 class SpawnChangeEvent extends LevelEvent{
+	public static $handlerList = null;
+
 	/** @var Position */
 	private $previousSpawn;
 
@@ -46,7 +46,7 @@ class SpawnChangeEvent extends LevelEvent{
 	/**
 	 * @return Position
 	 */
-	public function getPreviousSpawn() : Position{
+	public function getPreviousSpawn(){
 		return $this->previousSpawn;
 	}
 }

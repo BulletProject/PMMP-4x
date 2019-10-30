@@ -19,50 +19,43 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\InvalidCommandSyntaxException;
-use pocketmine\lang\TranslationContainer;
 use pocketmine\Player;
 use pocketmine\utils\TextFormat;
-use function array_shift;
-use function count;
 
 class DeopCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.deop.description",
-			"%commands.deop.usage"
+			"Takes the specified player's operator status",
+			"/deop <player>"
 		);
 		$this->setPermission("pocketmine.command.op.take");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(!$this->testPermission($sender)){
 			return true;
 		}
 
 		if(count($args) === 0){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
+
+			return false;
 		}
 
 		$name = array_shift($args);
-		if(!Player::isValidUserName($name)){
-			throw new InvalidCommandSyntaxException();
-		}
 
 		$player = $sender->getServer()->getOfflinePlayer($name);
 		$player->setOp(false);
 		if($player instanceof Player){
-			$player->sendMessage(TextFormat::GRAY . "You are no longer op!");
+			$player->sendMessage(TextFormat::YELLOW . "You are no longer op!");
 		}
-		Command::broadcastCommandMessage($sender, new TranslationContainer("commands.deop.success", [$player->getName()]));
+		Command::broadcastCommandMessage($sender, "De-opped " . $player->getName());
 
 		return true;
 	}

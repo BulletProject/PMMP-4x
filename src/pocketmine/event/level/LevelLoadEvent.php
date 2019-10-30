@@ -14,18 +14,16 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\level;
 
 /**
- * Called when a Level is loaded
+ * Called when a Level is saved
  */
 class LevelLoadEvent extends LevelEvent{
-
+	public static $handlerList = null;
 }

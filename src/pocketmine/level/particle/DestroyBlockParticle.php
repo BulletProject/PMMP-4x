@@ -19,30 +19,29 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\level\particle;
 
+use pocketmine\network\protocol\LevelEventPacket;
 use pocketmine\block\Block;
 use pocketmine\math\Vector3;
-use pocketmine\network\mcpe\protocol\LevelEventPacket;
+use pocketmine\Server;
 
 class DestroyBlockParticle extends Particle{
-
-	/** @var int */
+	
 	protected $data;
 
 	public function __construct(Vector3 $pos, Block $b){
 		parent::__construct($pos->x, $pos->y, $pos->z);
-		$this->data = $b->getRuntimeId();
+		$this->data = $b->getId() + ($b->getDamage() << 8);
 	}
-
-	public function encode(){
+	
+	public function spawnFor($players) {
 		$pk = new LevelEventPacket;
 		$pk->evid = LevelEventPacket::EVENT_PARTICLE_DESTROY;
-		$pk->position = $this->asVector3();
+		$pk->x = $this->x;
+		$pk->y = $this->y;
+		$pk->z = $this->z;
 		$pk->data = $this->data;
-
-		return $pk;
+		Server::broadcastPacket($players, $pk);
 	}
 }

@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,34 +15,29 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
-
-declare(strict_types=1);
 
 namespace pocketmine\block;
 
 use pocketmine\item\Item;
-use pocketmine\item\ItemFactory;
-use pocketmine\math\Vector3;
+use pocketmine\level\Level;
 use pocketmine\Player;
-use function mt_rand;
 
-class DoublePlant extends Flowable{
-	public const BITFLAG_TOP = 0x08;
+class DoublePlant extends Flowable {
 
 	protected $id = self::DOUBLE_PLANT;
 
-	public function __construct(int $meta = 0){
+	public function __construct($meta = 0) {
 		$this->meta = $meta;
 	}
 
-	public function canBeReplaced() : bool{
-		return $this->getVariant() === 2 or $this->getVariant() === 3; //grass or fern
+	public function canBeReplaced() {
+		return true;
 	}
 
-	public function getName() : string{
+	public function getName() {
 		static $names = [
 			0 => "Sunflower",
 			1 => "Lilac",
@@ -51,78 +46,80 @@ class DoublePlant extends Flowable{
 			4 => "Rose Bush",
 			5 => "Peony"
 		];
-		return $names[$this->getVariant()] ?? "";
+		return $names[$this->meta & 0x07];
 	}
 
-	public function place(Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, Player $player = null) : bool{
-		$id = $blockReplace->getSide(Vector3::SIDE_DOWN)->getId();
-		if(($id === Block::GRASS or $id === Block::DIRT) and $blockReplace->getSide(Vector3::SIDE_UP)->canBeReplaced()){
-			$this->getLevel()->setBlock($blockReplace, $this, false, false);
-			$this->getLevel()->setBlock($blockReplace->getSide(Vector3::SIDE_UP), BlockFactory::get($this->id, $this->meta | self::BITFLAG_TOP), false, false);
 
-			return true;
+	public function onUpdate($type) {
+		if ($type === Level::BLOCK_UPDATE_NORMAL) {
+			$blockUnder = $this->getSide(0);
+			if ($blockUnder->isTransparent() === true && $blockUnder->getId() != $this->id) { //Replace with common break method
+				$this->getLevel()->setBlock($this, new Air(), false, false, true);
+				return Level::BLOCK_UPDATE_NORMAL;
+			}
 		}
-
 		return false;
 	}
 
-	/**
-	 * Returns whether this double-plant has a corresponding other half.
-	 * @return bool
-	 */
-	public function isValidHalfPlant() : bool{
-		if($this->meta & self::BITFLAG_TOP){
-			$other = $this->getSide(Vector3::SIDE_DOWN);
-		}else{
-			$other = $this->getSide(Vector3::SIDE_UP);
-		}
-
-		return (
-			$other->getId() === $this->getId() and
-			$other->getVariant() === $this->getVariant() and
-			($other->getDamage() & self::BITFLAG_TOP) !== ($this->getDamage() & self::BITFLAG_TOP)
-		);
-	}
-
-	public function onNearbyBlockChange() : void{
-		if(!$this->isValidHalfPlant() or (($this->meta & self::BITFLAG_TOP) === 0 and $this->getSide(Vector3::SIDE_DOWN)->isTransparent())){
-			$this->getLevel()->useBreakOn($this);
-		}
-	}
-
-	public function getVariantBitmask() : int{
-		return 0x07;
-	}
-
-	public function getToolType() : int{
-		return ($this->getVariant() === 2 or $this->getVariant() === 3) ? BlockToolType::TYPE_SHEARS : BlockToolType::TYPE_NONE;
-	}
-
-	public function getToolHarvestLevel() : int{
-		return ($this->getVariant() === 2 or $this->getVariant() === 3) ? 1 : 0; //only grass or fern require shears
-	}
-
-	public function getDrops(Item $item) : array{
-		if($this->meta & self::BITFLAG_TOP){
-			if($this->isCompatibleWithTool($item)){
-				return parent::getDrops($item);
-			}
-
-			if(mt_rand(0, 24) === 0){
-				return [
-					ItemFactory::get(Item::SEEDS)
-				];
+	public function place(Item $item, Block $block, Block $target, $face, $fx, $fy, $fz, Player $player = null) {
+		if ($this->getDamage() < 0x08) {
+			$down = $this->getSide(0);
+			if ($down->getId() === self::GRASS) {
+				$blockAbove = $this->level->getBlockIdAt($this->x, $this->y + 1, $this->z);
+				if ($blockAbove == Block::AIR) {
+					if ($this->level->setBlock($this, $this, true, true)) {
+						$upperPart = clone $this;
+						$upperPart->y++;
+						$upperPart->setDamage($this->getDamage() | 0x08);
+						if ($this->level->setBlock($upperPart, $upperPart, true, true)) {
+							return true;
+						}
+						$this->level->setBlock($this, Block::get(Block::AIR), true, true);
+					}
+				}
 			}
 		}
-
-		return [];
+		return false;
 	}
 
-	public function getAffectedBlocks() : array{
-		if($this->isValidHalfPlant()){
-			return [$this, $this->getSide(($this->meta & self::BITFLAG_TOP) !== 0 ? Vector3::SIDE_DOWN : Vector3::SIDE_UP)];
+	public function onBreak(Item $item){
+		if (!$this->getLevel()->setBlock($this, new Air(), true, true)) {
+			return false;
 		}
-
-		return parent::getAffectedBlocks();
+		$meta = $this->getDamage();
+		if ($meta < 0x08 && $this->level->getBlockIdAt($this->x, $this->y + 1, $this->z) == $this->id) {
+			$this->y++;
+			if ($this->level->setBlock($this, Block::get(Block::AIR), true, true)) {
+				return true;
+			}
+			$this->y--;
+			$this->level->setBlock($this, $this, true, true);
+			return false;
+		} else if ($meta >= 0x08 && $this->level->getBlockIdAt($this->x, $this->y - 1, $this->z) == $this->id) {
+			$this->y--;
+			if ($this->level->setBlock($this, Block::get(Block::AIR), true, true)) {
+				return true;
+			}
+			$this->y++;
+			$this->level->setBlock($this, $this, true, true);
+			return false;
+		}
+		return true;
 	}
+	
+	public function getBreakTime(Item $item) {
+		return 0.05;
+	}
+
+	public function getDrops(Item $item) {
+		if ($this->meta >= 0x08 && $this->level->getBlockIdAt($this->x, $this->y - 1, $this->z) == $this->id) {
+			$meta = $this->level->getBlockDataAt($this->x, $this->y - 1, $this->z);
+		} else {
+			$meta = $this->meta;
+		}
+		return [
+			[$this->id, $meta & 0x07, 1]
+		];
+	}
+
 }

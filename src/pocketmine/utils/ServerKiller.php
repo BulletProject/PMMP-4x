@@ -17,50 +17,42 @@
  * @link http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\utils;
 
 use pocketmine\Thread;
-use function getmypid;
-use function time;
 
-class ServerKiller extends Thread{
+class ServerKiller extends Thread {
 
 	public $time;
 
-	/** @var bool */
-	private $stopped = false;
-
-	public function __construct($time = 15){
+	public function __construct($time = 15) {
 		$this->time = $time;
 	}
 
-	public function run(){
-		$this->registerClassLoader();
+	public function start(int $options = PTHREADS_INHERIT_NONE) {
+		parent::start($options);
+	}
+
+	public function run() {
 		$start = time();
-		$this->synchronized(function(){
-			if(!$this->stopped){
-				$this->wait($this->time * 1000000);
-			}
+		$this->synchronized(function() {
+			$this->wait($this->time * 1000000);
 		});
-		if(time() - $start >= $this->time){
+		if (time() - $start >= $this->time) {
 			echo "\nTook too long to stop, server was killed forcefully!\n";
-			@Utils::kill(getmypid());
+			$uname = php_uname("s");
+			if (stripos($uname, "Win") !== false or $uname === "Msys") {
+				exec("taskkill.exe /F /PID " . ((int) getmypid()) . " > NUL");
+			} else {
+				exec("kill -9 " . ((int) $pid) . " > /dev/null 2>&1");
+			}
 		}
 	}
 
-	public function quit() : void{
-		$this->synchronized(function() : void{
-			$this->stopped = true;
-			$this->notify();
-		});
-		parent::quit();
-	}
-
-	public function getThreadName() : string{
+	public function getThreadName() {
 		return "Server Killer";
 	}
+
 }

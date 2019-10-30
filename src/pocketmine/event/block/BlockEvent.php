@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 /**
  * Block related events
@@ -30,7 +28,7 @@ use pocketmine\block\Block;
 use pocketmine\event\Event;
 
 abstract class BlockEvent extends Event{
-	/** @var Block */
+	/** @var \pocketmine\block\Block */
 	protected $block;
 
 	/**
@@ -43,7 +41,7 @@ abstract class BlockEvent extends Event{
 	/**
 	 * @return Block
 	 */
-	public function getBlock() : Block{
+	public function getBlock(){
 		return $this->block;
 	}
 }

@@ -17,13 +17,26 @@
  * @link http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\inventory;
 
-interface Recipe{
+use pocketmine\utils\UUID;
 
-	public function registerToCraftingManager(CraftingManager $manager) : void;
+interface Recipe {
+
+	/**
+	 * @return \pocketmine\item\Item
+	 */
+	public function getResult();
+
+	public function registerToCraftingManager();
+
+	/**
+	 * @return UUID
+	 */
+	public function getId();
+	
+	public function scale($scale);
+	
 }

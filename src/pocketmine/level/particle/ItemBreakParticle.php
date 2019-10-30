@@ -19,12 +19,10 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\level\particle;
 
-use pocketmine\item\Item;
 use pocketmine\math\Vector3;
+use pocketmine\item\Item;
 
 class ItemBreakParticle extends GenericParticle{
 	public function __construct(Vector3 $pos, Item $item){

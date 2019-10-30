@@ -19,12 +19,10 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\permission;
 
 use pocketmine\plugin\Plugin;
-use pocketmine\plugin\PluginException;
+use pocketmine\utils\PluginException;
 
 class PermissionAttachment{
 	/** @var PermissionRemovedExecutor */
@@ -59,7 +57,7 @@ class PermissionAttachment{
 	/**
 	 * @return Plugin
 	 */
-	public function getPlugin() : Plugin{
+	public function getPlugin(){
 		return $this->plugin;
 	}
 
@@ -71,7 +69,7 @@ class PermissionAttachment{
 	}
 
 	/**
-	 * @return PermissionRemovedExecutor|null
+	 * @return PermissionRemovedExecutor
 	 */
 	public function getRemovalCallback(){
 		return $this->removed;
@@ -80,17 +78,20 @@ class PermissionAttachment{
 	/**
 	 * @return Permissible
 	 */
-	public function getPermissible() : Permissible{
+	public function getPermissible(){
 		return $this->permissible;
 	}
 
 	/**
 	 * @return bool[]
 	 */
-	public function getPermissions() : array{
+	public function getPermissions(){
 		return $this->permissions;
 	}
 
+	/**
+	 * @return bool[]
+	 */
 	public function clearPermissions(){
 		$this->permissions = [];
 		$this->permissible->recalculatePermissions();
@@ -120,7 +121,7 @@ class PermissionAttachment{
 	 * @param string|Permission $name
 	 * @param bool              $value
 	 */
-	public function setPermission($name, bool $value){
+	public function setPermission($name, $value){
 		$name = $name instanceof Permission ? $name->getName() : $name;
 		if(isset($this->permissions[$name])){
 			if($this->permissions[$name] === $value){

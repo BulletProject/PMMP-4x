@@ -19,21 +19,16 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\level\particle;
 
 use pocketmine\entity\Entity;
-use pocketmine\entity\Skin;
-use pocketmine\item\Item;
-use pocketmine\item\ItemFactory;
+use pocketmine\entity\Item as ItemEntity;
 use pocketmine\math\Vector3;
-use pocketmine\network\mcpe\protocol\AddPlayerPacket;
-use pocketmine\network\mcpe\protocol\PlayerListPacket;
-use pocketmine\network\mcpe\protocol\RemoveActorPacket;
-use pocketmine\network\mcpe\protocol\types\PlayerListEntry;
+use pocketmine\network\protocol\AddEntityPacket;
+use pocketmine\network\protocol\RemoveEntityPacket;
+use pocketmine\network\protocol\AddPlayerPacket;
 use pocketmine\utils\UUID;
-use function str_repeat;
+use pocketmine\Server;
 
 class FloatingTextParticle extends Particle{
 	//TODO: HACK!
@@ -45,83 +40,68 @@ class FloatingTextParticle extends Particle{
 
 	/**
 	 * @param Vector3 $pos
-	 * @param string  $text
-	 * @param string  $title
+	 * @param int $text
+	 * @param string $title
 	 */
-	public function __construct(Vector3 $pos, string $text, string $title = ""){
+	public function __construct(Vector3 $pos, $text, $title = ""){
 		parent::__construct($pos->x, $pos->y, $pos->z);
 		$this->text = $text;
 		$this->title = $title;
 	}
 
-	public function getText() : string{
-		return $this->text;
-	}
-
-	public function setText(string $text) : void{
+	public function setText($text){
 		$this->text = $text;
 	}
 
-	public function getTitle() : string{
-		return $this->title;
-	}
-
-	public function setTitle(string $title) : void{
+	public function setTitle($title){
 		$this->title = $title;
 	}
-
-	public function isInvisible() : bool{
+	
+	public function isInvisible(){
 		return $this->invisible;
 	}
-
-	public function setInvisible(bool $value = true) : void{
-		$this->invisible = $value;
+	
+	public function setInvisible($value = true){
+		$this->invisible = (bool) $value;
 	}
 
-	public function encode(){
+	public function spawnFor($players) {
 		$p = [];
 
 		if($this->entityId === null){
-			$this->entityId = Entity::$entityCount++;
+			$this->entityId = bcadd("1095216660480", mt_rand(0, 0x7fffffff)); //No conflict with other things
 		}else{
-			$pk0 = new RemoveActorPacket();
-			$pk0->entityUniqueId = $this->entityId;
+			$pk0 = new RemoveEntityPacket();
+			$pk0->eid = $this->entityId;
 
 			$p[] = $pk0;
 		}
 
 		if(!$this->invisible){
-			$uuid = UUID::fromRandom();
-			$name = $this->title . ($this->text !== "" ? "\n" . $this->text : "");
-
-			$add = new PlayerListPacket();
-			$add->type = PlayerListPacket::TYPE_ADD;
-			$add->entries = [PlayerListEntry::createAdditionEntry($uuid, $this->entityId, $name, new Skin("Standard_Custom", str_repeat("\x00", 8192)))];
-			$p[] = $add;
-
+			
 			$pk = new AddPlayerPacket();
-			$pk->uuid = $uuid;
-			$pk->username = $name;
-			$pk->entityRuntimeId = $this->entityId;
-			$pk->position = $this->asVector3(); //TODO: check offset
-			$pk->item = ItemFactory::get(Item::AIR, 0, 0);
-
-			$flags = (
-				1 << Entity::DATA_FLAG_IMMOBILE
-			);
+			$pk->uuid = UUID::fromRandom();
+			$pk->eid = $this->entityId;
+			$pk->x = $this->x;
+			$pk->y = $this->y + 0.15;
+			$pk->z = $this->z;
+			$pk->speedX = 0;
+			$pk->speedY = 0;
+			$pk->speedZ = 0;
+			$pk->yaw = 0;
+			$pk->pitch = 0;
 			$pk->metadata = [
-				Entity::DATA_FLAGS => [Entity::DATA_TYPE_LONG, $flags],
-				Entity::DATA_SCALE => [Entity::DATA_TYPE_FLOAT, 0.01] //zero causes problems on debug builds
+				Entity::DATA_FLAGS => [Entity::DATA_TYPE_LONG, (1 << Entity::DATA_FLAG_SHOW_NAMETAG) | (1 << Entity::DATA_FLAG_ALWAYS_SHOW_NAMETAG)],
+				Entity::DATA_NAMETAG => [Entity::DATA_TYPE_STRING, $this->title . ($this->text !== "" ? "\n" . $this->text : "")],
+				Entity::DATA_LEAD_HOLDER => [Entity::DATA_TYPE_LONG, -1],
+				Entity::DATA_SCALE => [Entity::DATA_TYPE_FLOAT, 0.01],
 			];
 
 			$p[] = $pk;
-
-			$remove = new PlayerListPacket();
-			$remove->type = PlayerListPacket::TYPE_REMOVE;
-			$remove->entries = [PlayerListEntry::createRemovalEntry($uuid)];
-			$p[] = $remove;
 		}
-
-		return $p;
+		
+		foreach ($p as $pk) {
+			Server::broadcastPacket($players, $pk);
+		}
 	}
 }

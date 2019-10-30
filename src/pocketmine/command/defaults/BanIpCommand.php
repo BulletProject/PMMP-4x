@@ -19,38 +19,33 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\InvalidCommandSyntaxException;
-use pocketmine\lang\TranslationContainer;
 use pocketmine\Player;
-use function array_shift;
-use function count;
-use function implode;
-use function preg_match;
+use pocketmine\utils\TextFormat;
 
 class BanIpCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.ban.ip.description",
-			"%commands.banip.usage"
+			"Prevents the specified IP address from using this server",
+			"/ban-ip <address|player> [reason...]"
 		);
 		$this->setPermission("pocketmine.command.ban.ip");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(!$this->testPermission($sender)){
 			return true;
 		}
 
 		if(count($args) === 0){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
+
+			return false;
 		}
 
 		$value = array_shift($args);
@@ -58,15 +53,11 @@ class BanIpCommand extends VanillaCommand{
 
 		if(preg_match("/^([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])\\.([01]?\\d\\d?|2[0-4]\\d|25[0-5])$/", $value)){
 			$this->processIPBan($value, $sender, $reason);
-
-			Command::broadcastCommandMessage($sender, new TranslationContainer("commands.banip.success", [$value]));
 		}else{
 			if(($player = $sender->getServer()->getPlayer($value)) instanceof Player){
 				$this->processIPBan($player->getAddress(), $sender, $reason);
-
-				Command::broadcastCommandMessage($sender, new TranslationContainer("commands.banip.success.players", [$player->getAddress(), $player->getName()]));
 			}else{
-				$sender->sendMessage(new TranslationContainer("commands.banip.invalid"));
+				$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
 
 				return false;
 			}
@@ -75,15 +66,17 @@ class BanIpCommand extends VanillaCommand{
 		return true;
 	}
 
-	private function processIPBan(string $ip, CommandSender $sender, string $reason){
+	private function processIPBan($ip, CommandSender $sender, $reason){
 		$sender->getServer()->getIPBans()->addBan($ip, $reason, null, $sender->getName());
 
 		foreach($sender->getServer()->getOnlinePlayers() as $player){
 			if($player->getAddress() === $ip){
-				$player->kick($reason !== "" ? $reason : "IP banned.");
+				$player->kick("You have been IP banned.");
 			}
 		}
 
-		$sender->getServer()->getNetwork()->blockAddress($ip, -1);
+		$sender->getServer()->blockAddress($ip, -1);
+
+		Command::broadcastCommandMessage($sender, "Banned IP Address " . $ip);
 	}
 }

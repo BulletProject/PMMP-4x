@@ -19,92 +19,70 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\permission;
 
-use function array_shift;
-use function explode;
-use function implode;
-use function strlen;
-use function strtolower;
-use function trim;
-
 class BanEntry{
-	/**
-	 * @var string
-	 */
 	public static $format = "Y-m-d H:i:s O";
 
-	/** @var string */
 	private $name;
 	/** @var \DateTime */
 	private $creationDate = null;
-	/** @var string */
 	private $source = "(Unknown)";
-	/** @var \DateTime|null */
+	/** @var \DateTime */
 	private $expirationDate = null;
-	/** @var string */
 	private $reason = "Banned by an operator.";
 
-	public function __construct(string $name){
+	public function __construct($name){
 		$this->name = strtolower($name);
 		$this->creationDate = new \DateTime();
 	}
 
-	public function getName() : string{
+	public function getName(){
 		return $this->name;
 	}
 
-	public function getCreated() : \DateTime{
+	public function getCreated(){
 		return $this->creationDate;
 	}
 
 	public function setCreated(\DateTime $date){
-		self::validateDate($date);
 		$this->creationDate = $date;
 	}
 
-	public function getSource() : string{
+	public function getSource(){
 		return $this->source;
 	}
 
-	public function setSource(string $source){
+	public function setSource($source){
 		$this->source = $source;
 	}
 
-	/**
-	 * @return \DateTime|null
-	 */
 	public function getExpires(){
 		return $this->expirationDate;
 	}
 
 	/**
-	 * @param \DateTime|null $date
+	 * @param \DateTime $date
 	 */
-	public function setExpires(\DateTime $date = null){
-		if($date !== null){
-			self::validateDate($date);
-		}
+	public function setExpires($date){
 		$this->expirationDate = $date;
 	}
 
-	public function hasExpired() : bool{
+	public function hasExpired(){
 		$now = new \DateTime();
 
 		return $this->expirationDate === null ? false : $this->expirationDate < $now;
 	}
 
-	public function getReason() : string{
+	public function getReason(){
 		return $this->reason;
 	}
 
-	public function setReason(string $reason){
+	public function setReason($reason){
 		$this->reason = $reason;
 	}
 
-	public function getString() : string{
+	public function getString(){
 		$str = "";
 		$str .= $this->getName();
 		$str .= "|";
@@ -120,71 +98,31 @@ class BanEntry{
 	}
 
 	/**
-	 * Hacky function to validate \DateTime objects due to a bug in PHP. format() with "Y" can emit years with more than
-	 * 4 digits, but createFromFormat() with "Y" doesn't accept them if they have more than 4 digits on the year.
-	 *
-	 * @link https://bugs.php.net/bug.php?id=75992
-	 *
-	 * @param \DateTime $dateTime
-	 *
-	 * @throws \RuntimeException if the argument can't be parsed from a formatted date string
-	 */
-	private static function validateDate(\DateTime $dateTime) : void{
-		self::parseDate($dateTime->format(self::$format));
-	}
-
-	/**
-	 * @param string $date
-	 *
-	 * @return \DateTime|null
-	 * @throws \RuntimeException
-	 */
-	private static function parseDate(string $date) : ?\DateTime{
-		$datetime = \DateTime::createFromFormat(self::$format, $date);
-		if(!($datetime instanceof \DateTime)){
-			throw new \RuntimeException("Error parsing date for BanEntry: " . implode(", ", \DateTime::getLastErrors()["errors"]));
-		}
-
-		return $datetime;
-	}
-
-	/**
 	 * @param string $str
 	 *
-	 * @return BanEntry|null
-	 * @throws \RuntimeException
+	 * @return BanEntry
 	 */
-	public static function fromString(string $str) : ?BanEntry{
+	public static function fromString($str){
 		if(strlen($str) < 2){
 			return null;
 		}else{
 			$str = explode("|", trim($str));
 			$entry = new BanEntry(trim(array_shift($str)));
-			do{
-				if(empty($str)){
-					break;
+			if(count($str) > 0){
+				$entry->setCreated(\DateTime::createFromFormat(self::$format, array_shift($str)));
+				if(count($str) > 0){
+					$entry->setSource(trim(array_shift($str)));
+					if(count($str) > 0){
+						$expire = trim(array_shift($str));
+						if(strtolower($expire) !== "forever" and strlen($expire) > 0){
+							$entry->setExpires(\DateTime::createFromFormat(self::$format, $expire));
+						}
+						if(count($str) > 0){
+							$entry->setReason(trim(array_shift($str)));
+						}
+					}
 				}
-
-				$entry->setCreated(self::parseDate(array_shift($str)));
-				if(empty($str)){
-					break;
-				}
-
-				$entry->setSource(trim(array_shift($str)));
-				if(empty($str)){
-					break;
-				}
-
-				$expire = trim(array_shift($str));
-				if($expire !== "" and strtolower($expire) !== "forever"){
-					$entry->setExpires(self::parseDate($expire));
-				}
-				if(empty($str)){
-					break;
-				}
-
-				$entry->setReason(trim(array_shift($str)));
-			}while(false);
+			}
 
 			return $entry;
 		}

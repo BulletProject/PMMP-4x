@@ -19,47 +19,46 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\level\generator;
 
-use pocketmine\block\BlockFactory;
-use pocketmine\level\biome\Biome;
+use pocketmine\block\Block;
+
+use pocketmine\level\generator\biome\Biome;
 use pocketmine\level\Level;
 use pocketmine\level\SimpleChunkManager;
 use pocketmine\scheduler\AsyncTask;
+
 use pocketmine\utils\Random;
-use function serialize;
-use function unserialize;
 
 class GeneratorRegisterTask extends AsyncTask{
 
-	public $generatorClass;
+	public $generator;
 	public $settings;
 	public $seed;
 	public $levelId;
-	public $worldHeight = Level::Y_MAX;
+	protected $yMask;
+	protected $maxY;
 
-	public function __construct(Level $level, string $generatorClass, array $generatorSettings = []){
-		$this->generatorClass = $generatorClass;
-		$this->settings = serialize($generatorSettings);
+	public function __construct(Level $level, Generator $generator){
+		$this->generator = get_class($generator);
+		$this->settings = serialize($generator->getSettings());
 		$this->seed = $level->getSeed();
 		$this->levelId = $level->getId();
-		$this->worldHeight = $level->getWorldHeight();
+		$this->yMask = $level->getYMask();
+		$this->maxY = $level->getMaxY();
 	}
 
 	public function onRun(){
-		BlockFactory::init();
+		Block::init();
 		Biome::init();
-		$manager = new SimpleChunkManager($this->seed, $this->worldHeight);
-		$this->saveToThreadStore("generation.level{$this->levelId}.manager", $manager);
 
-		/**
-		 * @var Generator $generator
-		 * @see Generator::__construct()
-		 */
-		$generator = new $this->generatorClass(unserialize($this->settings));
+		$manager = new SimpleChunkManager($this->seed, $this->yMask, $this->maxY);	
+		$this->saveToThreadStore("generation.level{$this->levelId}.manager", $manager);
+		/** @var Generator $generator */
+		$generator = $this->generator;
+		$generator = new $generator(unserialize($this->settings));
 		$generator->init($manager, new Random($manager->getSeed()));
 		$this->saveToThreadStore("generation.level{$this->levelId}.generator", $generator);
+		
 	}
 }

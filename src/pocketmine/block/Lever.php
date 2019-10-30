@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,79 +15,58 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
-
-declare(strict_types=1);
 
 namespace pocketmine\block;
 
 use pocketmine\item\Item;
-use pocketmine\math\Vector3;
-use pocketmine\Player;
+use pocketmine\item\Tool;
 
-class Lever extends Flowable{
+class Lever extends Transparent{
 
 	protected $id = self::LEVER;
 
-	public function __construct(int $meta = 0){
+	public function __construct($meta = 0){
 		$this->meta = $meta;
 	}
 
-	public function getName() : string{
+	public function getName(){
 		return "Lever";
 	}
 
-	public function getHardness() : float{
-		return 0.5;
+	public function canBeActivated(){
+		return true;
 	}
 
-	public function getVariantBitmask() : int{
+	public function getHardness(){
+		return 1;
+	}
+
+	public function getToolType(){
+		return Tool::TYPE_PICKAXE;
+	}
+
+	public function getDrops(Item $item){
+		return [
+			[Item::LEVER, 0, 1],
+		];
+	}
+	
+	public function canBeFlowedInto(){
+		return true;
+	}
+	
+	public function getResistance(){
 		return 0;
 	}
 
-	public function place(Item $item, Block $blockReplace, Block $blockClicked, int $face, Vector3 $clickVector, Player $player = null) : bool{
-		if(!$blockClicked->isSolid()){
-			return false;
-		}
-
-		if($face === Vector3::SIDE_DOWN){
-			$this->meta = 0;
-		}else{
-			$this->meta = 6 - $face;
-		}
-
-		if($player !== null){
-			if(($player->getDirection() & 0x01) === 0){
-				if($face === Vector3::SIDE_UP){
-					$this->meta = 6;
-				}
-			}else{
-				if($face === Vector3::SIDE_DOWN){
-					$this->meta = 7;
-				}
-			}
-		}
-
-		return $this->level->setBlock($blockReplace, $this, true, true);
+	public function isSolid(){
+		return false;
 	}
 
-	public function onNearbyBlockChange() : void{
-		$faces = [
-			0 => Vector3::SIDE_UP,
-			1 => Vector3::SIDE_WEST,
-			2 => Vector3::SIDE_EAST,
-			3 => Vector3::SIDE_NORTH,
-			4 => Vector3::SIDE_SOUTH,
-			5 => Vector3::SIDE_DOWN,
-			6 => Vector3::SIDE_DOWN,
-			7 => Vector3::SIDE_UP
-		];
-		if(!$this->getSide($faces[$this->meta & 0x07])->isSolid()){
-			$this->level->useBreakOn($this);
-		}
+	public function getBoundingBox(){
+		return null;
 	}
-
-	//TODO
 }

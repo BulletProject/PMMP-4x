@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,20 +15,16 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
-
-declare(strict_types=1);
 
 namespace pocketmine\level\generator\object;
 
 use pocketmine\block\Block;
-use pocketmine\block\BlockFactory;
 use pocketmine\block\Wood;
 use pocketmine\level\ChunkManager;
 use pocketmine\utils\Random;
-use function abs;
 
 class SpruceTree extends Tree{
 
@@ -39,7 +35,7 @@ class SpruceTree extends Tree{
 		$this->treeHeight = 10;
 	}
 
-	public function placeObject(ChunkManager $level, int $x, int $y, int $z, Random $random){
+	public function placeObject(ChunkManager $level, $x, $y, $z, Random $random){
 		$this->treeHeight = $random->nextBoundedInt(4) + 6;
 
 		$topSize = $this->treeHeight - (1 + $random->nextBoundedInt(2));
@@ -62,7 +58,7 @@ class SpruceTree extends Tree{
 						continue;
 					}
 
-					if(!BlockFactory::$solid[$level->getBlockIdAt($xx, $yyy, $zz)]){
+					if(!Block::$solid[$level->getBlockIdAt($xx, $yyy, $zz)]){
 						$level->setBlockIdAt($xx, $yyy, $zz, $this->leafBlock);
 						$level->setBlockDataAt($xx, $yyy, $zz, $this->type);
 					}
@@ -80,4 +76,6 @@ class SpruceTree extends Tree{
 			}
 		}
 	}
+
+
 }

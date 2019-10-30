@@ -1,6 +1,6 @@
 <?php
 
-/*
+/**
  *
  *  ____            _        _   __  __ _                  __  __ ____
  * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\entity;
 
@@ -27,8 +25,11 @@ use pocketmine\entity\Living;
 use pocketmine\item\Item;
 
 class EntityDeathEvent extends EntityEvent{
+	public static $handlerList = null;
+
 	/** @var Item[] */
 	private $drops = [];
+
 
 	/**
 	 * @param Living $entity
@@ -47,16 +48,17 @@ class EntityDeathEvent extends EntityEvent{
 	}
 
 	/**
-	 * @return Item[]
+	 * @return \pocketmine\item\Item[]
 	 */
-	public function getDrops() : array{
+	public function getDrops(){
 		return $this->drops;
 	}
 
 	/**
 	 * @param Item[] $drops
 	 */
-	public function setDrops(array $drops) : void{
+	public function setDrops(array $drops){
 		$this->drops = $drops;
 	}
+
 }

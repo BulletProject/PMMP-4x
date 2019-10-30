@@ -15,62 +15,58 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
-
-declare(strict_types=1);
 
 namespace pocketmine\block;
 
 use pocketmine\event\block\BlockSpreadEvent;
 use pocketmine\item\Item;
-use pocketmine\item\ItemFactory;
+use pocketmine\item\Tool;
+use pocketmine\level\Level;
 use pocketmine\math\Vector3;
-use function mt_rand;
+use pocketmine\Server;
 
 class Mycelium extends Solid{
 
 	protected $id = self::MYCELIUM;
 
-	public function __construct(int $meta = 0){
-		$this->meta = $meta;
+	public function __construct(){
+
 	}
 
-	public function getName() : string{
+	public function getName(){
 		return "Mycelium";
 	}
 
-	public function getToolType() : int{
-		return BlockToolType::TYPE_SHOVEL;
+	public function getToolType(){
+		return Tool::TYPE_SHOVEL;
 	}
 
-	public function getHardness() : float{
+	public function getHardness(){
 		return 0.6;
 	}
 
-	public function getDropsForCompatibleTool(Item $item) : array{
+	public function getDrops(Item $item){
 		return [
-			ItemFactory::get(Item::DIRT)
+			[Item::DIRT, 0, 1],
 		];
 	}
 
-	public function ticksRandomly() : bool{
-		return true;
-	}
-
-	public function onRandomTick() : void{
-		//TODO: light levels
-		$x = mt_rand($this->x - 1, $this->x + 1);
-		$y = mt_rand($this->y - 2, $this->y + 2);
-		$z = mt_rand($this->z - 1, $this->z + 1);
-		$block = $this->getLevel()->getBlockAt($x, $y, $z);
-		if($block->getId() === Block::DIRT){
-			if($block->getSide(Vector3::SIDE_UP) instanceof Transparent){
-				$ev = new BlockSpreadEvent($block, $this, BlockFactory::get(Block::MYCELIUM));
-				$ev->call();
-				if(!$ev->isCancelled()){
-					$this->getLevel()->setBlock($block, $ev->getNewState());
+	public function onUpdate($type){
+		if($type === Level::BLOCK_UPDATE_RANDOM){
+			//TODO: light levels
+			$x = mt_rand($this->x - 1, $this->x + 1);
+			$y = mt_rand($this->y - 2, $this->y + 2);
+			$z = mt_rand($this->z - 1, $this->z + 1);
+			$block = $this->getLevel()->getBlock(new Vector3($x, $y, $z));
+			if($block->getId() === Block::DIRT){
+				if($block->getSide(1) instanceof Transparent){
+					Server::getInstance()->getPluginManager()->callEvent($ev = new BlockSpreadEvent($block, $this, new Mycelium()));
+					if(!$ev->isCancelled()){
+						$this->getLevel()->setBlock($block, $ev->getNewState());
+					}
 				}
 			}
 		}

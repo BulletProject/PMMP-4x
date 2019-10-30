@@ -19,36 +19,18 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\inventory;
 
+
 use pocketmine\item\Item;
-use pocketmine\network\mcpe\protocol\types\WindowTypes;
 use pocketmine\tile\Furnace;
 
 class FurnaceInventory extends ContainerInventory{
-	/** @var Furnace */
-	protected $holder;
-
 	public function __construct(Furnace $tile){
-		parent::__construct($tile);
-	}
-
-	public function getNetworkType() : int{
-		return WindowTypes::FURNACE;
-	}
-
-	public function getName() : string{
-		return "Furnace";
-	}
-
-	public function getDefaultSize() : int{
-		return 3; //1 input, 1 fuel, 1 output
+		parent::__construct($tile, InventoryType::get(InventoryType::FURNACE));
 	}
 
 	/**
-	 * This override is here for documentation and code completion purposes only.
 	 * @return Furnace
 	 */
 	public function getHolder(){
@@ -58,21 +40,21 @@ class FurnaceInventory extends ContainerInventory{
 	/**
 	 * @return Item
 	 */
-	public function getResult() : Item{
+	public function getResult(){
 		return $this->getItem(2);
 	}
 
 	/**
 	 * @return Item
 	 */
-	public function getFuel() : Item{
+	public function getFuel(){
 		return $this->getItem(1);
 	}
 
 	/**
 	 * @return Item
 	 */
-	public function getSmelting() : Item{
+	public function getSmelting(){
 		return $this->getItem(0);
 	}
 
@@ -81,7 +63,7 @@ class FurnaceInventory extends ContainerInventory{
 	 *
 	 * @return bool
 	 */
-	public function setResult(Item $item) : bool{
+	public function setResult(Item $item){
 		return $this->setItem(2, $item);
 	}
 
@@ -90,7 +72,7 @@ class FurnaceInventory extends ContainerInventory{
 	 *
 	 * @return bool
 	 */
-	public function setFuel(Item $item) : bool{
+	public function setFuel(Item $item){
 		return $this->setItem(1, $item);
 	}
 
@@ -99,7 +81,13 @@ class FurnaceInventory extends ContainerInventory{
 	 *
 	 * @return bool
 	 */
-	public function setSmelting(Item $item) : bool{
+	public function setSmelting(Item $item){
 		return $this->setItem(0, $item);
+	}
+
+	public function onSlotChange($index, $before, $sendPacket = true){
+		parent::onSlotChange($index, $before, $sendPacket);
+
+		$this->getHolder()->scheduleUpdate();
 	}
 }

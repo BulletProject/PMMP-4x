@@ -14,25 +14,24 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\block;
 
 use pocketmine\block\Block;
 use pocketmine\event\Cancellable;
 use pocketmine\Player;
-use function count;
 
 /**
  * Called when a sign is changed by a player.
  */
 class SignChangeEvent extends BlockEvent implements Cancellable{
-	/** @var Player */
+	public static $handlerList = null;
+
+	/** @var \pocketmine\Player */
 	private $player;
 	/** @var string[] */
 	private $lines = [];
@@ -45,20 +44,20 @@ class SignChangeEvent extends BlockEvent implements Cancellable{
 	public function __construct(Block $theBlock, Player $thePlayer, array $theLines){
 		parent::__construct($theBlock);
 		$this->player = $thePlayer;
-		$this->setLines($theLines);
+		$this->lines = $theLines;
 	}
 
 	/**
 	 * @return Player
 	 */
-	public function getPlayer() : Player{
+	public function getPlayer(){
 		return $this->player;
 	}
 
 	/**
 	 * @return string[]
 	 */
-	public function getLines() : array{
+	public function getLines(){
 		return $this->lines;
 	}
 
@@ -66,39 +65,16 @@ class SignChangeEvent extends BlockEvent implements Cancellable{
 	 * @param int $index 0-3
 	 *
 	 * @return string
-	 *
-	 * @throws \InvalidArgumentException if the index is out of bounds
 	 */
-	public function getLine(int $index) : string{
-		if($index < 0 or $index > 3){
-			throw new \InvalidArgumentException("Index must be in the range 0-3!");
-		}
-
+	public function getLine($index){
 		return $this->lines[$index];
-	}
-
-	/**
-	 * @param string[] $lines
-	 *
-	 * @throws \InvalidArgumentException if there are more or less than 4 lines in the passed array
-	 */
-	public function setLines(array $lines) : void{
-		if(count($lines) !== 4){
-			throw new \InvalidArgumentException("Array size must be 4!");
-		}
-		$this->lines = $lines;
 	}
 
 	/**
 	 * @param int    $index 0-3
 	 * @param string $line
-	 *
-	 * @throws \InvalidArgumentException if the index is out of bounds
 	 */
-	public function setLine(int $index, string $line) : void{
-		if($index < 0 or $index > 3){
-			throw new \InvalidArgumentException("Index must be in the range 0-3!");
-		}
+	public function setLine($index, $line){
 		$this->lines[$index] = $line;
 	}
 }

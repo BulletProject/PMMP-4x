@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\block;
 
@@ -32,52 +30,44 @@ use pocketmine\Player;
  * Called when a player places a block
  */
 class BlockPlaceEvent extends BlockEvent implements Cancellable{
-	/** @var Player */
+	public static $handlerList = null;
+
+	/** @var \pocketmine\Player */
 	protected $player;
 
-	/** @var Item */
+	/** @var \pocketmine\item\Item */
 	protected $item;
 
-	/** @var Block */
+
 	protected $blockReplace;
-	/** @var Block */
 	protected $blockAgainst;
 
 	public function __construct(Player $player, Block $blockPlace, Block $blockReplace, Block $blockAgainst, Item $item){
-		parent::__construct($blockPlace);
+		$this->block = $blockPlace;
 		$this->blockReplace = $blockReplace;
 		$this->blockAgainst = $blockAgainst;
 		$this->item = $item;
 		$this->player = $player;
 	}
 
-	/**
-	 * Returns the player who is placing the block.
-	 * @return Player
-	 */
-	public function getPlayer() : Player{
+	public function getPlayer(){
 		return $this->player;
 	}
 
 	/**
 	 * Gets the item in hand
-	 * @return Item
+	 *
+	 * @return mixed
 	 */
-	public function getItem() : Item{
+	public function getItem(){
 		return $this->item;
 	}
 
-	/**
-	 * @return Block
-	 */
-	public function getBlockReplaced() : Block{
+	public function getBlockReplaced(){
 		return $this->blockReplace;
 	}
 
-	/**
-	 * @return Block
-	 */
-	public function getBlockAgainst() : Block{
+	public function getBlockAgainst(){
 		return $this->blockAgainst;
 	}
 }

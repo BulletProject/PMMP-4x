@@ -19,12 +19,10 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command;
 
-use pocketmine\command\utils\InvalidCommandSyntaxException;
 use pocketmine\plugin\Plugin;
+use pocketmine\utils\TextFormat;
 
 class PluginCommand extends Command implements PluginIdentifiableCommand{
 
@@ -38,14 +36,14 @@ class PluginCommand extends Command implements PluginIdentifiableCommand{
 	 * @param string $name
 	 * @param Plugin $owner
 	 */
-	public function __construct(string $name, Plugin $owner){
+	public function __construct($name, Plugin $owner){
 		parent::__construct($name);
 		$this->owningPlugin = $owner;
 		$this->executor = $owner;
 		$this->usageMessage = "";
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $commandLabel, array $args){
 
 		if(!$this->owningPlugin->isEnabled()){
 			return false;
@@ -58,13 +56,13 @@ class PluginCommand extends Command implements PluginIdentifiableCommand{
 		$success = $this->executor->onCommand($sender, $this, $commandLabel, $args);
 
 		if(!$success and $this->usageMessage !== ""){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
 		}
 
 		return $success;
 	}
 
-	public function getExecutor() : CommandExecutor{
+	public function getExecutor(){
 		return $this->executor;
 	}
 
@@ -72,13 +70,13 @@ class PluginCommand extends Command implements PluginIdentifiableCommand{
 	 * @param CommandExecutor $executor
 	 */
 	public function setExecutor(CommandExecutor $executor){
-		$this->executor = $executor;
+		$this->executor = ($executor != null) ? $executor : $this->owningPlugin;
 	}
 
 	/**
 	 * @return Plugin
 	 */
-	public function getPlugin() : Plugin{
+	public function getPlugin(){
 		return $this->owningPlugin;
 	}
 }

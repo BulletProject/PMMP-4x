@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\player;
 
@@ -27,7 +25,8 @@ use pocketmine\block\Block;
 use pocketmine\Player;
 
 class PlayerBedLeaveEvent extends PlayerEvent{
-	/** @var Block */
+	public static $handlerList = null;
+
 	private $bed;
 
 	public function __construct(Player $player, Block $bed){
@@ -35,10 +34,8 @@ class PlayerBedLeaveEvent extends PlayerEvent{
 		$this->bed = $bed;
 	}
 
-	/**
-	 * @return Block
-	 */
-	public function getBed() : Block{
+	public function getBed(){
 		return $this->bed;
 	}
+
 }

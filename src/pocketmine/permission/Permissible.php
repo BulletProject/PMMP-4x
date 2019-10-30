@@ -19,8 +19,6 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\permission;
 
 use pocketmine\plugin\Plugin;
@@ -32,18 +30,18 @@ interface Permissible extends ServerOperator{
 	 *
 	 * @param string|Permission $name
 	 *
-	 * @return bool
+	 * @return boolean
 	 */
-	public function isPermissionSet($name) : bool;
+	public function isPermissionSet($name);
 
 	/**
 	 * Returns the permission value if overridden, or the default value if not
 	 *
 	 * @param string|Permission $name
 	 *
-	 * @return bool
+	 * @return mixed
 	 */
-	public function hasPermission($name) : bool;
+	public function hasPermission($name);
 
 	/**
 	 * @param Plugin $plugin
@@ -52,7 +50,7 @@ interface Permissible extends ServerOperator{
 	 *
 	 * @return PermissionAttachment
 	 */
-	public function addAttachment(Plugin $plugin, string $name = null, bool $value = null) : PermissionAttachment;
+	public function addAttachment(Plugin $plugin, $name = null, $value = null);
 
 	/**
 	 * @param PermissionAttachment $attachment
@@ -68,8 +66,8 @@ interface Permissible extends ServerOperator{
 	public function recalculatePermissions();
 
 	/**
-	 * @return PermissionAttachmentInfo[]
+	 * @return Permission[]
 	 */
-	public function getEffectivePermissions() : array;
+	public function getEffectivePermissions();
 
 }

@@ -17,59 +17,68 @@
  * @link http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\inventory;
 
 use pocketmine\item\Item;
-use function array_map;
-use function count;
+use pocketmine\Server;
+use pocketmine\utils\UUID;
 
-class ShapelessRecipe implements CraftingRecipe{
+class ShapelessRecipe implements Recipe {
+
+	/** @var Item */
+	private $output;
+	private $id = null;
+
 	/** @var Item[] */
 	private $ingredients = [];
-	/** @var Item[] */
-	private $results;
 
-	/**
-	 * @param Item[] $ingredients No more than 9 total. This applies to sum of item stack counts, not count of array.
-	 * @param Item[] $results List of result items created by this recipe.
-	 */
-	public function __construct(array $ingredients, array $results){
-		foreach($ingredients as $item){
-			//Ensure they get split up properly
-			$this->addIngredient($item);
+	public function __construct(Item $result) {
+		$this->output = clone $result;
+	}
+	
+	public function __clone() {
+		$this->output = clone $this->output;
+		$ingredients = [];
+		foreach ($this->ingredients as $item) {
+			$ingredients[] = clone $item;
 		}
-
-		$this->results = array_map(function(Item $item) : Item{ return clone $item; }, $results);
+		$this->ingredients = $ingredients;
 	}
 
-	public function getResults() : array{
-		return array_map(function(Item $item) : Item{ return clone $item; }, $this->results);
+	public function getId() {
+		return $this->id;
 	}
 
-	public function getResultsFor(CraftingGrid $grid) : array{
-		return $this->getResults();
+	public function setId(UUID $id) {
+		if ($this->id !== null) {
+			throw new \InvalidStateException("Id is already set");
+		}
+		$this->id = $id;
+	}
+
+	public function getResult() {
+		return clone $this->output;
 	}
 
 	/**
 	 * @param Item $item
 	 *
-	 * @return ShapelessRecipe
+	 * @returns ShapelessRecipe
 	 *
 	 * @throws \InvalidArgumentException
 	 */
-	public function addIngredient(Item $item) : ShapelessRecipe{
-		if(count($this->ingredients) + $item->getCount() > 9){
+	public function addIngredient(Item $item) {
+		if (count($this->ingredients) >= 9) {
 			throw new \InvalidArgumentException("Shapeless recipes cannot have more than 9 ingredients");
 		}
-
-		while($item->getCount() > 0){
-			$this->ingredients[] = $item->pop();
+		$it = clone $item;
+		$it->setCount(1);
+		while ($item->getCount() > 0) {
+			$this->ingredients[] = clone $it;
+			$item->setCount($item->getCount() - 1);
 		}
-
 		return $this;
 	}
 
@@ -78,14 +87,14 @@ class ShapelessRecipe implements CraftingRecipe{
 	 *
 	 * @return $this
 	 */
-	public function removeIngredient(Item $item){
-		foreach($this->ingredients as $index => $ingredient){
-			if($item->getCount() <= 0){
+	public function removeIngredient(Item $item) {
+		foreach ($this->ingredients as $index => $ingredient) {
+			if ($item->getCount() <= 0) {
 				break;
 			}
-			if($ingredient->equals($item, !$item->hasAnyDamageValue(), $item->hasCompoundTag())){
+			if ($ingredient->equals($item, $item->getDamage() === null ? false : true, $item->getCompound() === null ? false : true)) {
 				unset($this->ingredients[$index]);
-				$item->pop();
+				$item->setCount($item->getCount() - 1);
 			}
 		}
 
@@ -95,46 +104,37 @@ class ShapelessRecipe implements CraftingRecipe{
 	/**
 	 * @return Item[]
 	 */
-	public function getIngredientList() : array{
-		return array_map(function(Item $item) : Item{ return clone $item; }, $this->ingredients);
+	public function getIngredientList() {
+		$ingredients = [];
+		foreach ($this->ingredients as $ingredient) {
+			$ingredients[] = clone $ingredient;
+		}
+		return $ingredients;
 	}
 
 	/**
 	 * @return int
 	 */
-	public function getIngredientCount() : int{
+	public function getIngredientCount() {
 		$count = 0;
-		foreach($this->ingredients as $ingredient){
+		foreach ($this->ingredients as $ingredient) {
 			$count += $ingredient->getCount();
 		}
-
 		return $count;
 	}
 
-	public function registerToCraftingManager(CraftingManager $manager) : void{
-		$manager->registerShapelessRecipe($this);
+	public function registerToCraftingManager() {
+		Server::getInstance()->getCraftingManager()->registerShapelessRecipe($this);
 	}
 
-	/**
-	 * @param CraftingGrid $grid
-	 *
-	 * @return bool
-	 */
-	public function matchesCraftingGrid(CraftingGrid $grid) : bool{
-		//don't pack the ingredients - shapeless recipes require that each ingredient be in a separate slot
-		$input = $grid->getContents();
-
-		foreach($this->ingredients as $needItem){
-			foreach($input as $j => $haveItem){
-				if($haveItem->equals($needItem, !$needItem->hasAnyDamageValue(), $needItem->hasCompoundTag()) and $haveItem->getCount() >= $needItem->getCount()){
-					unset($input[$j]);
-					continue 2;
-				}
-			}
-
-			return false; //failed to match the needed item to a given item
+	public function scale($scale) {
+		if ($scale <= 0) {
+			return;
 		}
-
-		return empty($input); //crafting grid should be empty apart from the given ingredient stacks
+		foreach ($this->ingredients as $item) {
+			$item->setCount($item->getCount() * $scale);
+		}
+		$this->output->setCount($this->output->getCount() * $scale);
 	}
+
 }

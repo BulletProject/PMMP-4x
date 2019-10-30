@@ -19,41 +19,38 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine;
 
-use pocketmine\metadata\Metadatable;
+
 use pocketmine\metadata\MetadataValue;
-use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\nbt\tag\Compound;
 use pocketmine\plugin\Plugin;
 
-class OfflinePlayer implements IPlayer, Metadatable{
+class OfflinePlayer implements IPlayer{
 
-	/** @var string */
 	private $name;
-	/** @var Server */
 	private $server;
-	/** @var CompoundTag|null */
-	private $namedtag = null;
+	private $namedtag;
 
 	/**
 	 * @param Server $server
 	 * @param string $name
 	 */
-	public function __construct(Server $server, string $name){
+	public function __construct(Server $server, $name){
 		$this->server = $server;
 		$this->name = $name;
-		if($this->server->hasOfflinePlayerData($this->name)){
+		if(file_exists($this->server->getDataPath() . "players/" . strtolower($this->getName()) . ".dat")){
 			$this->namedtag = $this->server->getOfflinePlayerData($this->name);
+		}else{
+			$this->namedtag = null;
 		}
 	}
 
-	public function isOnline() : bool{
+	public function isOnline(){
 		return $this->getPlayer() !== null;
 	}
 
-	public function getName() : string{
+	public function getName(){
 		return $this->name;
 	}
 
@@ -61,75 +58,77 @@ class OfflinePlayer implements IPlayer, Metadatable{
 		return $this->server;
 	}
 
-	public function isOp() : bool{
-		return $this->server->isOp($this->name);
+	public function isOp(){
+		return $this->server->isOp(strtolower($this->getName()));
 	}
 
-	public function setOp(bool $value){
+	public function setOp($value){
 		if($value === $this->isOp()){
 			return;
 		}
 
-		if($value){
-			$this->server->addOp($this->name);
+		if($value === true){
+			$this->server->addOp(strtolower($this->getName()));
 		}else{
-			$this->server->removeOp($this->name);
+			$this->server->removeOp(strtolower($this->getName()));
 		}
 	}
 
-	public function isBanned() : bool{
-		return $this->server->getNameBans()->isBanned($this->name);
+	public function isBanned(){
+		return $this->server->getNameBans()->isBanned(strtolower($this->getName()));
 	}
 
-	public function setBanned(bool $value){
-		if($value){
-			$this->server->getNameBans()->addBan($this->name, null, null, null);
+	public function setBanned($value){
+		if($value === true){
+			$this->server->getNameBans()->addBan($this->getName(), null, null, null);
 		}else{
-			$this->server->getNameBans()->remove($this->name);
+			$this->server->getNameBans()->remove($this->getName());
 		}
 	}
 
-	public function isWhitelisted() : bool{
-		return $this->server->isWhitelisted($this->name);
+	public function isWhitelisted(){
+		return $this->server->isWhitelisted(strtolower($this->getName()));
 	}
 
-	public function setWhitelisted(bool $value){
-		if($value){
-			$this->server->addWhitelist($this->name);
+	public function setWhitelisted($value){
+		if($value === true){
+			$this->server->addWhitelist(strtolower($this->getName()));
 		}else{
-			$this->server->removeWhitelist($this->name);
+			$this->server->removeWhitelist(strtolower($this->getName()));
 		}
 	}
 
 	public function getPlayer(){
-		return $this->server->getPlayerExact($this->name);
+		return $this->server->getPlayerExact($this->getName());
 	}
 
 	public function getFirstPlayed(){
-		return $this->namedtag instanceof CompoundTag ? $this->namedtag->getLong("firstPlayed", 0, true) : null;
+		return $this->namedtag instanceof Compound ? $this->namedtag["firstPlayed"] : null;
 	}
 
 	public function getLastPlayed(){
-		return $this->namedtag instanceof CompoundTag ? $this->namedtag->getLong("lastPlayed", 0, true) : null;
+		return $this->namedtag instanceof Compound ? $this->namedtag["lastPlayed"] : null;
 	}
 
-	public function hasPlayedBefore() : bool{
-		return $this->namedtag instanceof CompoundTag;
+	public function hasPlayedBefore(){
+		return $this->namedtag instanceof Compound;
 	}
 
-	public function setMetadata(string $metadataKey, MetadataValue $newMetadataValue){
-		$this->server->getPlayerMetadata()->setMetadata($this, $metadataKey, $newMetadataValue);
+	public function setMetadata($metadataKey, MetadataValue $metadataValue){
+		$this->server->getPlayerMetadata()->setMetadata($this, $metadataKey, $metadataValue);
 	}
 
-	public function getMetadata(string $metadataKey){
+	public function getMetadata($metadataKey){
 		return $this->server->getPlayerMetadata()->getMetadata($this, $metadataKey);
 	}
 
-	public function hasMetadata(string $metadataKey) : bool{
+	public function hasMetadata($metadataKey){
 		return $this->server->getPlayerMetadata()->hasMetadata($this, $metadataKey);
 	}
 
-	public function removeMetadata(string $metadataKey, Plugin $owningPlugin){
-		$this->server->getPlayerMetadata()->removeMetadata($this, $metadataKey, $owningPlugin);
+	public function removeMetadata($metadataKey, Plugin $plugin){
+		$this->server->getPlayerMetadata()->removeMetadata($this, $metadataKey, $plugin);
 	}
+
+
 }

@@ -19,54 +19,53 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\Command;
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\InvalidCommandSyntaxException;
-use pocketmine\lang\TranslationContainer;
-use pocketmine\level\Level;
-use function count;
+use pocketmine\network\Network;
+use pocketmine\network\protocol\SetDifficultyPacket;
+use pocketmine\Server;
+use pocketmine\utils\TextFormat;
 
 class DifficultyCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.difficulty.description",
-			"%commands.difficulty.usage"
+			"Sets the game difficulty",
+			"/difficulty <new difficulty>"
 		);
 		$this->setPermission("pocketmine.command.difficulty");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(!$this->testPermission($sender)){
 			return true;
 		}
 
 		if(count($args) !== 1){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
+
+			return false;
 		}
 
-		$difficulty = Level::getDifficultyFromString($args[0]);
+		$difficulty = Server::getDifficultyFromString($args[0]);
 
 		if($sender->getServer()->isHardcore()){
-			$difficulty = Level::DIFFICULTY_HARD;
+			$difficulty = 3;
 		}
 
 		if($difficulty !== -1){
 			$sender->getServer()->setConfigInt("difficulty", $difficulty);
 
-			//TODO: add per-world support
-			foreach($sender->getServer()->getLevels() as $level){
-				$level->setDifficulty($difficulty);
-			}
+			$pk = new SetDifficultyPacket();
+			$pk->difficulty = $sender->getServer()->getDifficulty();
+			Server::broadcastPacket($sender->getServer()->getOnlinePlayers(), $pk);
 
-			Command::broadcastCommandMessage($sender, new TranslationContainer("commands.difficulty.success", [$difficulty]));
+			$sender->sendMessage("Set difficulty to " . $difficulty);
 		}else{
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage("Unknown difficulty");
 		}
 
 		return true;

@@ -19,49 +19,29 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\inventory;
 
 use pocketmine\level\Position;
-use pocketmine\network\mcpe\protocol\types\WindowTypes;
 use pocketmine\Player;
 
 class AnvilInventory extends ContainerInventory{
-
-	/** @var Position */
-	protected $holder;
-
 	public function __construct(Position $pos){
-		parent::__construct($pos->asPosition());
-	}
-
-	public function getNetworkType() : int{
-		return WindowTypes::ANVIL;
-	}
-
-	public function getName() : string{
-		return "Anvil";
-	}
-
-	public function getDefaultSize() : int{
-		return 2; //1 input, 1 material
+		parent::__construct(new FakeBlockMenu($this, $pos), InventoryType::get(InventoryType::ANVIL));
 	}
 
 	/**
-	 * This override is here for documentation and code completion purposes only.
-	 * @return Position
+	 * @return FakeBlockMenu
 	 */
 	public function getHolder(){
 		return $this->holder;
 	}
 
-	public function onClose(Player $who) : void{
+	public function onClose(Player $who){
 		parent::onClose($who);
 
-		foreach($this->getContents() as $item){
-			$who->dropItem($item);
+		for($i = 0; $i < 2; ++$i){
+			$this->getHolder()->getLevel()->dropItem($this->getHolder()->add(0.5, 0.5, 0.5), $this->getItem($i));
+			$this->clear($i);
 		}
-		$this->clearAll();
 	}
 }

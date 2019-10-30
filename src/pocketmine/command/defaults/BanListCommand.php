@@ -19,61 +19,44 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\InvalidCommandSyntaxException;
-use pocketmine\lang\TranslationContainer;
-use pocketmine\permission\BanEntry;
-use function array_map;
-use function count;
-use function implode;
-use function strtolower;
+
 
 class BanListCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.banlist.description",
-			"%commands.banlist.usage"
+			"View all players banned from this server",
+			"/banlist [ips|players]"
 		);
 		$this->setPermission("pocketmine.command.ban.list");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(!$this->testPermission($sender)){
 			return true;
 		}
-
+		$list = $sender->getServer()->getNameBans();
 		if(isset($args[0])){
 			$args[0] = strtolower($args[0]);
 			if($args[0] === "ips"){
 				$list = $sender->getServer()->getIPBans();
 			}elseif($args[0] === "players"){
 				$list = $sender->getServer()->getNameBans();
-			}else{
-				throw new InvalidCommandSyntaxException();
 			}
-		}else{
-			$list = $sender->getServer()->getNameBans();
-			$args[0] = "players";
 		}
 
+		$message = "";
 		$list = $list->getEntries();
-		$message = implode(", ", array_map(function(BanEntry $entry){
-			return $entry->getName();
-		}, $list));
-
-		if($args[0] === "ips"){
-			$sender->sendMessage(new TranslationContainer("commands.banlist.ips", [count($list)]));
-		}else{
-			$sender->sendMessage(new TranslationContainer("commands.banlist.players", [count($list)]));
+		foreach($list as $entry){
+			$message .= $entry->getName() . ", ";
 		}
 
-		$sender->sendMessage($message);
+		$sender->sendMessage("There are " . count($list) . " total banned players:");
+		$sender->sendMessage(substr($message, 0, -2));
 
 		return true;
 	}

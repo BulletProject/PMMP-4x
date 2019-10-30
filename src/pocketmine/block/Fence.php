@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,94 +15,71 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\block;
 
+use pocketmine\item\Tool;
 use pocketmine\math\AxisAlignedBB;
 use pocketmine\math\Vector3;
 
-abstract class Fence extends Transparent{
+class Fence extends Transparent{
 
-	public function __construct(int $meta = 0){
+	protected $id = self::FENCE;
+
+	public function __construct($meta = 0){
 		$this->meta = $meta;
 	}
 
-	public function getThickness() : float{
-		return 0.25;
+	public function getHardness(){
+		return 2;
 	}
 
-	protected function recalculateBoundingBox() : ?AxisAlignedBB{
-		$width = 0.5 - $this->getThickness() / 2;
+	public function getToolType(){
+		return Tool::TYPE_AXE;
+	}
+
+
+	public function getName(){
+		static $names = [
+			0 => "Oak Fence",
+			1 => "Spruce Fence",
+			2 => "Birch Fence",
+			3 => "Jungle Fence",
+			4 => "Acacia Fence",
+			5 => "Dark Oak Fence",
+			"",
+			""
+		];
+		return $names[$this->meta & 0x07];
+	}
+
+	protected function recalculateBoundingBox(){
+
+		$north = $this->canConnect($this->getSide(Vector3::SIDE_NORTH));
+		$south = $this->canConnect($this->getSide(Vector3::SIDE_SOUTH));
+		$west = $this->canConnect($this->getSide(Vector3::SIDE_WEST));
+		$east = $this->canConnect($this->getSide(Vector3::SIDE_EAST));
+
+		$n = $north ? 0 : 0.375;
+		$s = $south ? 1 : 0.625;
+		$w = $west ? 0 : 0.375;
+		$e = $east ? 1 : 0.625;
 
 		return new AxisAlignedBB(
-			$this->x + ($this->canConnect($this->getSide(Vector3::SIDE_WEST)) ? 0 : $width),
+			$this->x + $w,
 			$this->y,
-			$this->z + ($this->canConnect($this->getSide(Vector3::SIDE_NORTH)) ? 0 : $width),
-			$this->x + 1 - ($this->canConnect($this->getSide(Vector3::SIDE_EAST)) ? 0 : $width),
+			$this->z + $n,
+			$this->x + $e,
 			$this->y + 1.5,
-			$this->z + 1 - ($this->canConnect($this->getSide(Vector3::SIDE_SOUTH)) ? 0 : $width)
+			$this->z + $s
 		);
 	}
 
-	protected function recalculateCollisionBoxes() : array{
-		$inset = 0.5 - $this->getThickness() / 2;
-
-		/** @var AxisAlignedBB[] $bbs */
-		$bbs = [];
-
-		$connectWest = $this->canConnect($this->getSide(Vector3::SIDE_WEST));
-		$connectEast = $this->canConnect($this->getSide(Vector3::SIDE_EAST));
-
-		if($connectWest or $connectEast){
-			//X axis (west/east)
-			$bbs[] = new AxisAlignedBB(
-				$this->x + ($connectWest ? 0 : $inset),
-				$this->y,
-				$this->z + $inset,
-				$this->x + 1 - ($connectEast ? 0 : $inset),
-				$this->y + 1.5,
-				$this->z + 1 - $inset
-			);
-		}
-
-		$connectNorth = $this->canConnect($this->getSide(Vector3::SIDE_NORTH));
-		$connectSouth = $this->canConnect($this->getSide(Vector3::SIDE_SOUTH));
-
-		if($connectNorth or $connectSouth){
-			//Z axis (north/south)
-			$bbs[] = new AxisAlignedBB(
-				$this->x + $inset,
-				$this->y,
-				$this->z + ($connectNorth ? 0 : $inset),
-				$this->x + 1 - $inset,
-				$this->y + 1.5,
-				$this->z + 1 - ($connectSouth ? 0 : $inset)
-			);
-		}
-
-		if(empty($bbs)){
-			//centre post AABB (only needed if not connected on any axis - other BBs overlapping will do this if any connections are made)
-			return [
-				new AxisAlignedBB(
-					$this->x + $inset,
-					$this->y,
-					$this->z + $inset,
-					$this->x + 1 - $inset,
-					$this->y + 1.5,
-					$this->z + 1 - $inset
-				)
-			];
-		}
-
-		return $bbs;
-	}
-
 	public function canConnect(Block $block){
-		return $block instanceof static or $block instanceof FenceGate or ($block->isSolid() and !$block->isTransparent());
+		return ($block instanceof Fence or $block instanceof FenceGate) ? true : $block->isSolid() and !$block->isTransparent();
 	}
+
 }

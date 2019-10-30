@@ -19,41 +19,39 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\CommandSender;
-use pocketmine\command\utils\InvalidCommandSyntaxException;
-use pocketmine\lang\TranslationContainer;
 use pocketmine\Server;
-use function count;
+use pocketmine\utils\TextFormat;
 
 class DefaultGamemodeCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.defaultgamemode.description",
-			"%commands.defaultgamemode.usage"
+			"Set the default gamemode",
+			"/defaultgamemode <mode>"
 		);
 		$this->setPermission("pocketmine.command.defaultgamemode");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(!$this->testPermission($sender)){
 			return true;
 		}
 
 		if(count($args) === 0){
-			throw new InvalidCommandSyntaxException();
+			$sender->sendMessage(TextFormat::RED . "Usage: " . $this->usageMessage);
+
+			return false;
 		}
 
 		$gameMode = Server::getGamemodeFromString($args[0]);
 
 		if($gameMode !== -1){
 			$sender->getServer()->setConfigInt("gamemode", $gameMode);
-			$sender->sendMessage(new TranslationContainer("commands.defaultgamemode.success", [Server::getGamemodeString($gameMode)]));
+			$sender->sendMessage("Default game mode set to " . strtolower(Server::getGamemodeString($gameMode)));
 		}else{
 			$sender->sendMessage("Unknown game mode");
 		}

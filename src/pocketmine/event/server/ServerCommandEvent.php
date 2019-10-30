@@ -14,12 +14,10 @@
  * (at your option) any later version.
  *
  * @author PocketMine Team
- * @link http://www.pocketmine.net/
+ * @link   http://www.pocketmine.net/
  *
  *
-*/
-
-declare(strict_types=1);
+ */
 
 namespace pocketmine\event\server;
 
@@ -32,11 +30,11 @@ use pocketmine\event\Cancellable;
  * You don't want to use this except for a few cases like logging commands,
  * blocking commands on certain places, or applying modifiers.
  *
- * The message DOES NOT contain a slash at the start
- *
- * @deprecated Use CommandEvent instead.
+ * The message contains a slash at the start
  */
 class ServerCommandEvent extends ServerEvent implements Cancellable{
+	public static $handlerList = null;
+
 	/** @var string */
 	protected $command;
 
@@ -47,7 +45,7 @@ class ServerCommandEvent extends ServerEvent implements Cancellable{
 	 * @param CommandSender $sender
 	 * @param string        $command
 	 */
-	public function __construct(CommandSender $sender, string $command){
+	public function __construct(CommandSender $sender, $command){
 		$this->sender = $sender;
 		$this->command = $command;
 	}
@@ -55,21 +53,22 @@ class ServerCommandEvent extends ServerEvent implements Cancellable{
 	/**
 	 * @return CommandSender
 	 */
-	public function getSender() : CommandSender{
+	public function getSender(){
 		return $this->sender;
 	}
 
 	/**
 	 * @return string
 	 */
-	public function getCommand() : string{
+	public function getCommand(){
 		return $this->command;
 	}
 
 	/**
 	 * @param string $command
 	 */
-	public function setCommand(string $command) : void{
+	public function setCommand($command){
 		$this->command = $command;
 	}
+
 }

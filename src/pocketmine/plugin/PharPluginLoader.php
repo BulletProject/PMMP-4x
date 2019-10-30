@@ -19,38 +19,59 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\plugin;
 
-use function is_file;
-use function strlen;
-use function substr;
+use pocketmine\event\plugin\PluginDisableEvent;
+use pocketmine\event\plugin\PluginEnableEvent;
+use pocketmine\Server;
+use pocketmine\utils\PluginException;
 
 /**
  * Handles different types of plugins
  */
 class PharPluginLoader implements PluginLoader{
 
-	/** @var \ClassLoader */
-	private $loader;
+	/** @var Server */
+	private $server;
 
-	public function __construct(\ClassLoader $loader){
-		$this->loader = $loader;
-	}
-
-	public function canLoadPlugin(string $path) : bool{
-		$ext = ".phar";
-		return is_file($path) and substr($path, -strlen($ext)) === $ext;
+	/**
+	 * @param Server $server
+	 */
+	public function __construct(Server $server){
+		$this->server = $server;
 	}
 
 	/**
 	 * Loads the plugin contained in $file
 	 *
 	 * @param string $file
+	 *
+	 * @return Plugin
+	 *
+	 * @throws \Exception
 	 */
-	public function loadPlugin(string $file) : void{
-		$this->loader->addPath("$file/src");
+	public function loadPlugin($file){
+		if(($description = $this->getPluginDescription($file)) instanceof PluginDescription){
+			$this->server->getLogger()->info("Loading " . $description->getFullName());
+			$dataFolder = dirname($file) . DIRECTORY_SEPARATOR . $description->getName();
+			if(file_exists($dataFolder) and !is_dir($dataFolder)){
+				throw new \InvalidStateException("Projected dataFolder '" . $dataFolder . "' for " . $description->getName() . " exists and is not a directory");
+			}
+			$file = "phar://$file";
+			$className = $description->getMain();
+			$this->server->getLoader()->addPath("$file/src");
+
+			if(class_exists($className, true)){
+				$plugin = new $className();
+				$this->initPlugin($plugin, $description, $dataFolder, $file);
+
+				return $plugin;
+			}else{
+				throw new PluginException("Couldn't load plugin " . $description->getName() . ": main class not found");
+			}
+		}
+
+		return null;
 	}
 
 	/**
@@ -58,9 +79,9 @@ class PharPluginLoader implements PluginLoader{
 	 *
 	 * @param string $file
 	 *
-	 * @return null|PluginDescription
+	 * @return PluginDescription
 	 */
-	public function getPluginDescription(string $file) : ?PluginDescription{
+	public function getPluginDescription($file){
 		$phar = new \Phar($file);
 		if(isset($phar["plugin.yml"])){
 			$pluginYml = $phar["plugin.yml"];
@@ -72,7 +93,49 @@ class PharPluginLoader implements PluginLoader{
 		return null;
 	}
 
-	public function getAccessProtocol() : string{
-		return "phar://";
+	/**
+	 * Returns the filename patterns that this loader accepts
+	 *
+	 * @return array
+	 */
+	public function getPluginFilters(){
+		return "/\\.phar$/i";
+	}
+
+	/**
+	 * @param PluginBase        $plugin
+	 * @param PluginDescription $description
+	 * @param string            $dataFolder
+	 * @param string            $file
+	 */
+	private function initPlugin(PluginBase $plugin, PluginDescription $description, $dataFolder, $file){
+		$plugin->init($this, $this->server, $description, $dataFolder, $file);
+		$plugin->onLoad();
+	}
+
+	/**
+	 * @param Plugin $plugin
+	 */
+	public function enablePlugin(Plugin $plugin){
+		if($plugin instanceof PluginBase and !$plugin->isEnabled()){
+			$this->server->getLogger()->info("Enabling " . $plugin->getDescription()->getFullName());
+
+			$plugin->setEnabled(true);
+
+			$this->server->getPluginManager()->callEvent(new PluginEnableEvent($plugin));
+		}
+	}
+
+	/**
+	 * @param Plugin $plugin
+	 */
+	public function disablePlugin(Plugin $plugin){
+		if($plugin instanceof PluginBase and $plugin->isEnabled()){
+			$this->server->getLogger()->info("Disabling " . $plugin->getDescription()->getFullName());
+
+			$this->server->getPluginManager()->callEvent(new PluginDisableEvent($plugin));
+
+			$plugin->setEnabled(false);
+		}
 	}
 }

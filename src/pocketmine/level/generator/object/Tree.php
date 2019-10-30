@@ -2,11 +2,11 @@
 
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,27 +15,25 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
-
-declare(strict_types=1);
 
 namespace pocketmine\level\generator\object;
 
 use pocketmine\block\Block;
-use pocketmine\block\BlockFactory;
 use pocketmine\block\Sapling;
 use pocketmine\level\ChunkManager;
 use pocketmine\utils\Random;
-use function abs;
 
 abstract class Tree{
 	public $overridable = [
 		Block::AIR => true,
-		Block::SAPLING => true,
-		Block::LEAVES => true,
+		6 => true,
+		17 => true,
+		18 => true,
 		Block::SNOW_LAYER => true,
+		Block::LOG2 => true,
 		Block::LEAVES2 => true
 	];
 
@@ -44,7 +42,7 @@ abstract class Tree{
 	public $leafBlock = Block::LEAVES;
 	public $treeHeight = 7;
 
-	public static function growTree(ChunkManager $level, int $x, int $y, int $z, Random $random, int $type = 0){
+	public static function growTree(ChunkManager $level, $x, $y, $z, Random $random, $type = 0){
 		switch($type){
 			case Sapling::SPRUCE:
 				$tree = new SpruceTree();
@@ -59,9 +57,7 @@ abstract class Tree{
 			case Sapling::JUNGLE:
 				$tree = new JungleTree();
 				break;
-			case Sapling::ACACIA:
-			case Sapling::DARK_OAK:
-				return; //TODO
+			case Sapling::OAK:
 			default:
 				$tree = new OakTree();
 				/*if($random->nextRange(0, 9) === 0){
@@ -77,10 +73,10 @@ abstract class Tree{
 	}
 
 
-	public function canPlaceObject(ChunkManager $level, int $x, int $y, int $z, Random $random) : bool{
+	public function canPlaceObject(ChunkManager $level, $x, $y, $z, Random $random){
 		$radiusToCheck = 0;
 		for($yy = 0; $yy < $this->treeHeight + 3; ++$yy){
-			if($yy === 1 or $yy === $this->treeHeight){
+			if($yy == 1 or $yy === $this->treeHeight){
 				++$radiusToCheck;
 			}
 			for($xx = -$radiusToCheck; $xx < ($radiusToCheck + 1); ++$xx){
@@ -95,7 +91,7 @@ abstract class Tree{
 		return true;
 	}
 
-	public function placeObject(ChunkManager $level, int $x, int $y, int $z, Random $random){
+	public function placeObject(ChunkManager $level, $x, $y, $z, Random $random){
 
 		$this->placeTrunk($level, $x, $y, $z, $random, $this->treeHeight - 1);
 
@@ -109,7 +105,7 @@ abstract class Tree{
 					if($xOff === $mid and $zOff === $mid and ($yOff === 0 or $random->nextBoundedInt(2) === 0)){
 						continue;
 					}
-					if(!BlockFactory::$solid[$level->getBlockIdAt($xx, $yy, $zz)]){
+					if(!Block::$solid[$level->getBlockIdAt($xx, $yy, $zz)]){
 						$level->setBlockIdAt($xx, $yy, $zz, $this->leafBlock);
 						$level->setBlockDataAt($xx, $yy, $zz, $this->type);
 					}
@@ -118,7 +114,7 @@ abstract class Tree{
 		}
 	}
 
-	protected function placeTrunk(ChunkManager $level, int $x, int $y, int $z, Random $random, int $trunkHeight){
+	protected function placeTrunk(ChunkManager $level, $x, $y, $z, Random $random, $trunkHeight){
 		// The base dirt block
 		$level->setBlockIdAt($x, $y - 1, $z, Block::DIRT);
 

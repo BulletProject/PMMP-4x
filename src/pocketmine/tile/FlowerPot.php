@@ -1,12 +1,11 @@
 <?php
-
 /*
  *
- *  ____            _        _   __  __ _                  __  __ ____
- * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \
+ *  ____            _        _   __  __ _                  __  __ ____  
+ * |  _ \ ___   ___| | _____| |_|  \/  (_)_ __   ___      |  \/  |  _ \ 
  * | |_) / _ \ / __| |/ / _ \ __| |\/| | | '_ \ / _ \_____| |\/| | |_) |
- * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/
- * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_|
+ * |  __/ (_) | (__|   <  __/ |_| |  | | | | | |  __/_____| |  | |  __/ 
+ * |_|   \___/ \___|_|\_\___|\__|_|  |_|_|_| |_|\___|     |_|  |_|_| 
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
@@ -15,40 +14,36 @@
  *
  * @author PocketMine Team
  * @link http://www.pocketmine.net/
- *
+ * 
  *
 */
-
-declare(strict_types=1);
 
 namespace pocketmine\tile;
 
 use pocketmine\item\Item;
-use pocketmine\item\ItemFactory;
-use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\level\format\FullChunk;
+use pocketmine\nbt\tag\Compound;
+use pocketmine\nbt\tag\IntTag;
+use pocketmine\nbt\tag\ShortTag;
+use pocketmine\nbt\tag\StringTag;
 
 class FlowerPot extends Spawnable{
-	public const TAG_ITEM = "item";
-	public const TAG_ITEM_DATA = "mData";
-
-	/** @var Item */
-	private $item;
-
-	protected function readSaveData(CompoundTag $nbt) : void{
-		$this->item = ItemFactory::get($nbt->getShort(self::TAG_ITEM, 0, true), $nbt->getInt(self::TAG_ITEM_DATA, 0, true), 1);
+	
+	public function __construct(FullChunk $chunk, Compound $nbt){
+		if(!isset($nbt->Item)){
+			$nbt->item = new ShortTag("item", 0);
+		}
+		if(!isset($nbt->Data)){
+			$nbt->mData = new IntTag("mData", 0);
+		}
+		parent::__construct($chunk, $nbt);
 	}
-
-	protected function writeSaveData(CompoundTag $nbt) : void{
-		$nbt->setShort(self::TAG_ITEM, $this->item->getId());
-		$nbt->setInt(self::TAG_ITEM_DATA, $this->item->getDamage());
-	}
-
-	public function canAddItem(Item $item) : bool{
+	
+	public function canAddItem(Item $item){
 		if(!$this->isEmpty()){
 			return false;
 		}
 		switch($item->getId()){
-			/** @noinspection PhpMissingBreakStatementInspection */
 			case Item::TALL_GRASS:
 				if($item->getDamage() === 1){
 					return false;
@@ -65,26 +60,36 @@ class FlowerPot extends Spawnable{
 				return false;
 		}
 	}
-
-	public function getItem() : Item{
-		return clone $this->item;
+	
+	public function getItem(){
+		return Item::get((int) ($this->namedtag["item"] ?? 0), (int) ($this->namedtag["mData"] ?? 0), 1);
 	}
-
+	
 	public function setItem(Item $item){
-		$this->item = clone $item;
-		$this->onChanged();
+		$this->namedtag["item"] = $item->getId();
+		$this->namedtag["mData"] = $item->getDamage();
+		$this->spawnToAll();
+		if($this->chunk){
+			$this->chunk->setChanged();
+		}
 	}
-
+	
 	public function removeItem(){
-		$this->setItem(ItemFactory::get(Item::AIR, 0, 0));
+		$this->setItem(Item::get(Item::AIR));
 	}
-
-	public function isEmpty() : bool{
-		return $this->getItem()->isNull();
+	
+	public function isEmpty(){
+		return $this->getItem()->getId() === Item::AIR;
 	}
-
-	protected function addAdditionalSpawnData(CompoundTag $nbt) : void{
-		$nbt->setShort(self::TAG_ITEM, $this->item->getId());
-		$nbt->setInt(self::TAG_ITEM_DATA, $this->item->getDamage());
+	
+	public function getSpawnCompound(){
+		return new Compound("", [
+			new StringTag("id", Tile::FLOWER_POT),
+			new IntTag("x", (int) $this->x),
+			new IntTag("y", (int) $this->y),
+			new IntTag("z", (int) $this->z),
+			new ShortTag("item", (int) $this->namedtag["item"]),
+			new IntTag("mData", (int) $this->namedtag["mData"])
+		]);
 	}
 }

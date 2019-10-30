@@ -19,39 +19,32 @@
  *
 */
 
-declare(strict_types=1);
-
 /**
  * Permission related classes
  */
-
 namespace pocketmine\permission;
 
-use function is_array;
-use function is_bool;
-use function strtolower;
+use pocketmine\Server;
 
 /**
  * Represents a permission
  */
 class Permission{
-	public const DEFAULT_OP = "op";
-	public const DEFAULT_NOT_OP = "notop";
-	public const DEFAULT_TRUE = "true";
-	public const DEFAULT_FALSE = "false";
+	const DEFAULT_OP = "op";
+	const DEFAULT_NOT_OP = "notop";
+	const DEFAULT_TRUE = "true";
+	const DEFAULT_FALSE = "false";
 
 	public static $DEFAULT_PERMISSION = self::DEFAULT_OP;
 
 	/**
-	 * @param bool|string $value
+	 * @param $value
 	 *
 	 * @return string
-	 *
-	 * @throws \InvalidArgumentException
 	 */
-	public static function getByName($value) : string{
+	public static function getByName($value){
 		if(is_bool($value)){
-			if($value){
+			if($value === true){
 				return "true";
 			}else{
 				return "false";
@@ -76,20 +69,137 @@ class Permission{
 
 			case "true":
 				return self::DEFAULT_TRUE;
-			case "false":
+
+			default:
 				return self::DEFAULT_FALSE;
 		}
+	}
 
-		throw new \InvalidArgumentException("Unknown permission default name \"$value\"");
+	/** @var string */
+	private $name;
+
+	/** @var string */
+	private $description;
+
+	/**
+	 * @var string[]
+	 */
+	private $children = [];
+
+	/** @var string */
+	private $defaultValue;
+
+	/**
+	 * Creates a new Permission object to be attached to Permissible objects
+	 *
+	 * @param string       $name
+	 * @param string       $description
+	 * @param string       $defaultValue
+	 * @param Permission[] $children
+	 */
+	public function __construct($name, $description = null, $defaultValue = null, array $children = []){
+		$this->name = $name;
+		$this->description = $description !== null ? $description : "";
+		$this->defaultValue = $defaultValue !== null ? $defaultValue : self::$DEFAULT_PERMISSION;
+		$this->children = $children;
+
+		$this->recalculatePermissibles();
 	}
 
 	/**
-	 * @param array  $data
-	 * @param string $default
+	 * @return string
+	 */
+	public function getName(){
+		return $this->name;
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public function &getChildren(){
+		return $this->children;
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getDefault(){
+		return $this->defaultValue;
+	}
+
+	/**
+	 * @param string $value
+	 */
+	public function setDefault($value){
+		if($value !== $this->defaultValue){
+			$this->defaultValue = $value;
+			$this->recalculatePermissibles();
+		}
+	}
+
+	/**
+	 * @return string
+	 */
+	public function getDescription(){
+		return $this->description;
+	}
+
+	/**
+	 * @param string $value
+	 */
+	public function setDescription($value){
+		$this->description = $value;
+	}
+
+	/**
+	 * @return Permissible[]
+	 */
+	public function getPermissibles(){
+		return Server::getInstance()->getPluginManager()->getPermissionSubscriptions($this->name);
+	}
+
+	public function recalculatePermissibles(){
+		$perms = $this->getPermissibles();
+
+		Server::getInstance()->getPluginManager()->recalculatePermissionDefaults($this);
+
+		foreach($perms as $p){
+			$p->recalculatePermissions();
+		}
+	}
+
+
+	/**
+	 * @param string|Permission $name
+	 * @param                   $value
+	 *
+	 * @return Permission|void Permission if $name is a string, void if it's a Permission
+	 */
+	public function addParent($name, $value){
+		if($name instanceof Permission){
+			$name->getChildren()[$this->getName()] = $value;
+			$name->recalculatePermissibles();
+			return;
+		}else{
+			$perm = Server::getInstance()->getPluginManager()->getPermission($name);
+			if($perm === null){
+				$perm = new Permission($name);
+				Server::getInstance()->getPluginManager()->addPermission($perm);
+			}
+
+			$this->addParent($perm, $value);
+
+			return $perm;
+		}
+	}
+
+	/**
+	 * @param array $data
+	 * @param       $default
 	 *
 	 * @return Permission[]
 	 */
-	public static function loadPermissions(array $data, string $default = self::DEFAULT_OP) : array{
+	public static function loadPermissions(array $data, $default = self::DEFAULT_OP){
 		$result = [];
 		foreach($data as $key => $entry){
 			$result[] = self::loadPermission($key, $entry, $default, $result);
@@ -108,7 +218,7 @@ class Permission{
 	 *
 	 * @throws \Exception
 	 */
-	public static function loadPermission(string $name, array $data, string $default = self::DEFAULT_OP, array &$output = []) : Permission{
+	public static function loadPermission($name, array $data, $default = self::DEFAULT_OP, &$output = []){
 		$desc = null;
 		$children = [];
 		if(isset($data["default"])){
@@ -140,123 +250,8 @@ class Permission{
 		}
 
 		return new Permission($name, $desc, $default, $children);
-	}
 
-	/** @var string */
-	private $name;
-
-	/** @var string */
-	private $description;
-
-	/**
-	 * @var bool[]
-	 */
-	private $children;
-
-	/** @var string */
-	private $defaultValue;
-
-	/**
-	 * Creates a new Permission object to be attached to Permissible objects
-	 *
-	 * @param string $name
-	 * @param string $description
-	 * @param string $defaultValue
-	 * @param bool[] $children
-	 */
-	public function __construct(string $name, string $description = null, string $defaultValue = null, array $children = []){
-		$this->name = $name;
-		$this->description = $description ?? "";
-		$this->defaultValue = $defaultValue ?? self::$DEFAULT_PERMISSION;
-		$this->children = $children;
-
-		$this->recalculatePermissibles();
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getName() : string{
-		return $this->name;
-	}
-
-	/**
-	 * @return bool[]
-	 */
-	public function &getChildren() : array{
-		return $this->children;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getDefault() : string{
-		return $this->defaultValue;
-	}
-
-	/**
-	 * @param string $value
-	 */
-	public function setDefault(string $value){
-		if($value !== $this->defaultValue){
-			$this->defaultValue = $value;
-			$this->recalculatePermissibles();
-		}
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getDescription() : string{
-		return $this->description;
-	}
-
-	/**
-	 * @param string $value
-	 */
-	public function setDescription(string $value){
-		$this->description = $value;
-	}
-
-	/**
-	 * @return Permissible[]
-	 */
-	public function getPermissibles() : array{
-		return PermissionManager::getInstance()->getPermissionSubscriptions($this->name);
-	}
-
-	public function recalculatePermissibles(){
-		$perms = $this->getPermissibles();
-
-		PermissionManager::getInstance()->recalculatePermissionDefaults($this);
-
-		foreach($perms as $p){
-			$p->recalculatePermissions();
-		}
 	}
 
 
-	/**
-	 * @param string|Permission $name
-	 * @param bool              $value
-	 *
-	 * @return Permission|null Permission if $name is a string, null if it's a Permission
-	 */
-	public function addParent($name, bool $value){
-		if($name instanceof Permission){
-			$name->getChildren()[$this->getName()] = $value;
-			$name->recalculatePermissibles();
-			return null;
-		}else{
-			$perm = PermissionManager::getInstance()->getPermission($name);
-			if($perm === null){
-				$perm = new Permission($name);
-				PermissionManager::getInstance()->addPermission($perm);
-			}
-
-			$this->addParent($perm, $value);
-
-			return $perm;
-		}
-	}
 }

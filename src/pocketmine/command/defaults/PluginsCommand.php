@@ -19,40 +19,43 @@
  *
 */
 
-declare(strict_types=1);
-
 namespace pocketmine\command\defaults;
 
 use pocketmine\command\CommandSender;
-use pocketmine\lang\TranslationContainer;
-use pocketmine\plugin\Plugin;
 use pocketmine\utils\TextFormat;
-use function array_map;
-use function count;
-use function implode;
 
 class PluginsCommand extends VanillaCommand{
 
-	public function __construct(string $name){
+	public function __construct($name){
 		parent::__construct(
 			$name,
-			"%pocketmine.command.plugins.description",
-			"%pocketmine.command.plugins.usage",
+			"Gets a list of plugins running on the server",
+			"/plugins",
 			["pl"]
 		);
 		$this->setPermission("pocketmine.command.plugins");
 	}
 
-	public function execute(CommandSender $sender, string $commandLabel, array $args){
+	public function execute(CommandSender $sender, $currentAlias, array $args){
 		if(!$this->testPermission($sender)){
 			return true;
 		}
 
-		$list = array_map(function(Plugin $plugin) : string{
-			return ($plugin->isEnabled() ? TextFormat::GREEN : TextFormat::RED) . $plugin->getDescription()->getFullName();
-		}, $sender->getServer()->getPluginManager()->getPlugins());
+		$sender->sendMessage("Plugins " . $this->getPluginList($sender));
 
-		$sender->sendMessage(new TranslationContainer("pocketmine.command.plugins.success", [count($list), implode(TextFormat::WHITE . ", ", $list)]));
 		return true;
+	}
+
+	private function getPluginList(CommandSender $sender){
+		$list = "";
+		foreach(($plugins = $sender->getServer()->getPluginManager()->getPlugins()) as $plugin){
+			if(strlen($list) > 0){
+				$list .= TextFormat::WHITE . ", ";
+			}
+			$list .= $plugin->isEnabled() ? TextFormat::GREEN : TextFormat::RED;
+			$list .= $plugin->getDescription()->getFullName();
+		}
+
+		return "(" . count($plugins) . "): $list";
 	}
 }
