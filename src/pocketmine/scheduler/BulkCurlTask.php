@@ -23,6 +23,8 @@ declare(strict_types=1);
 
 namespace pocketmine\scheduler;
 
+use pocketmine\utils\Internet;
+use pocketmine\utils\InternetException;
 use function serialize;
 use function unserialize;
 
@@ -50,5 +52,15 @@ class BulkCurlTask extends AsyncTask{
 	}
 
 	public function onRun(){
+		$operations = unserialize($this->operations);
+		$results = [];
+		foreach($operations as $op){
+			try{
+				$results[] = Internet::simpleCurl($op["page"], $op["timeout"] ?? 10, $op["extraHeaders"] ?? [], $op["extraOpts"] ?? []);
+			}catch(InternetException $e){
+				$results[] = $e;
+			}
+		}
+		$this->setResult($results);
 	}
 }

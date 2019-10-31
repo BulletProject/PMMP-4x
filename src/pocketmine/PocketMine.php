@@ -169,12 +169,12 @@ namespace pocketmine {
 
 		set_time_limit(0); //Who set it to 30 seconds?!?!
 
-	//ini_set("allow_url_fopen", '1');
-	//ini_set("display_errors", '1');
-	//ini_set("display_startup_errors", '1');
-	//ini_set("default_charset", "utf-8");
+		ini_set("allow_url_fopen", '1');
+		ini_set("display_errors", '1');
+		ini_set("display_startup_errors", '1');
+		ini_set("default_charset", "utf-8");
 
-	//ini_set("memory_limit", '-1');
+		ini_set("memory_limit", '-1');
 
 		define('pocketmine\RESOURCE_PATH', \pocketmine\PATH . 'src' . DIRECTORY_SEPARATOR . 'pocketmine' . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR);
 
@@ -237,6 +237,21 @@ namespace pocketmine {
 		define('pocketmine\VERSION', $version->getFullVersion(true));
 
 		$gitHash = str_repeat("00", 20);
+
+		if(\Phar::running(true) === ""){
+			if(Utils::execute("git rev-parse HEAD", $out) === 0 and $out !== false and strlen($out = trim($out)) === 40){
+				$gitHash = trim($out);
+				if(Utils::execute("git diff --quiet") === 1 or Utils::execute("git diff --cached --quiet") === 1){ //Locally-modified
+					$gitHash .= "-dirty";
+				}
+			}
+		}else{
+			$phar = new \Phar(\Phar::running(false));
+			$meta = $phar->getMetadata();
+			if(isset($meta["git"])){
+				$gitHash = $meta["git"];
+			}
+		}
 
 		define('pocketmine\GIT_COMMIT', $gitHash);
 

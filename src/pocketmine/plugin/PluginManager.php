@@ -265,6 +265,24 @@ class PluginManager{
 						continue;
 					}
 
+					if(!$this->isCompatibleApi(...$description->getCompatibleApis())){
+						$this->server->getLogger()->error($this->server->getLanguage()->translateString("pocketmine.plugin.loadError", [
+							$name,
+							$this->server->getLanguage()->translateString("%pocketmine.plugin.incompatibleAPI", [implode(", ", $description->getCompatibleApis())])
+						]));
+						continue;
+					}
+
+					if(count($pluginMcpeProtocols = $description->getCompatibleMcpeProtocols()) > 0){
+						$serverMcpeProtocols = [ProtocolInfo::CURRENT_PROTOCOL];
+						if(count(array_intersect($pluginMcpeProtocols, $serverMcpeProtocols)) === 0){
+							$this->server->getLogger()->error($this->server->getLanguage()->translateString("pocketmine.plugin.loadError", [
+								$name,
+								$this->server->getLanguage()->translateString("%pocketmine.plugin.incompatibleProtocol", [implode(", ", $pluginMcpeProtocols)])
+							]));
+							continue;
+						}
+					}
 
 					$plugins[$name] = $file;
 

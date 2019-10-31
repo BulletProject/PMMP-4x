@@ -24,12 +24,9 @@ declare(strict_types=1);
 namespace pocketmine\network\mcpe\protocol\types;
 
 use pocketmine\block\BlockIds;
-use pocketmine\nbt\BigEndianNBTStream;
-use pocketmine\nbt\tag\CompoundTag;
-use pocketmine\utils\BinaryDataException;
-use RuntimeException;
 use function file_get_contents;
 use function getmypid;
+use function json_decode;
 use function mt_rand;
 use function mt_srand;
 use function shuffle;
@@ -51,28 +48,23 @@ final class RuntimeBlockMapping{
 	}
 
 	public static function init() : void{
-		try{
-			/** @var CompoundTag $tag */
-			$tag = (new BigEndianNBTStream())->read(file_get_contents(\pocketmine\RESOURCE_PATH . "runtime_block_states.dat"));
-		}catch(BinaryDataException $e){
-			throw new RuntimeException("", 0, $e);
-		}
+		$legacyIdMap = json_decode(file_get_contents(\pocketmine\RESOURCE_PATH . "vanilla/block_id_map.json"), true);
 
+		$compressedTable = json_decode(file_get_contents(\pocketmine\RESOURCE_PATH . "vanilla/required_block_states.json"), true);
 		$decompressed = [];
 
-		$states = $tag->getListTag("Palette");
-		foreach($states as $state){
-			/** @var CompoundTag $state */
-			$block = $state->getCompoundTag("block");
-
-			$decompressed[] = [
-				"name" => $block->getString("name"),
-				"states" => $block->getCompoundTag("states"),
-				"data" => $state->getShort("meta"),
-				"legacy_id" => $state->getShort("id"),
-			];
+		foreach($compressedTable as $prefix => $entries){
+			foreach($entries as $shortStringId => $states){
+				foreach($states as $state){
+					$name = "$prefix:$shortStringId";
+					$decompressed[] = [
+						"name" => $name,
+						"data" => $state,
+						"legacy_id" => $legacyIdMap[$name]
+					];
+				}
+			}
 		}
-
 		self::$bedrockKnownStates = self::randomizeTable($decompressed);
 
 		foreach(self::$bedrockKnownStates as $k => $obj){
@@ -99,7 +91,6 @@ final class RuntimeBlockMapping{
 		mt_srand(getmypid() ?: 0); //Use a seed which is the same on all threads. This isn't a secure seed, but we don't care.
 		shuffle($table);
 		mt_srand($postSeed); //restore a good quality seed that isn't dependent on PID
-
 		return $table;
 	}
 
@@ -125,7 +116,6 @@ final class RuntimeBlockMapping{
 	 */
 	public static function fromStaticRuntimeId(int $runtimeId) : array{
 		$v = self::$runtimeToLegacyMap[$runtimeId];
-
 		return [$v >> 4, $v & 0xf];
 	}
 
@@ -140,7 +130,5 @@ final class RuntimeBlockMapping{
 	public static function getBedrockKnownStates() : array{
 		return self::$bedrockKnownStates;
 	}
-
 }
-
 RuntimeBlockMapping::init();

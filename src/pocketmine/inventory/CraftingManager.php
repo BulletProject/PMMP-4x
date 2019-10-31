@@ -51,15 +51,15 @@ class CraftingManager{
 	}
 
 	public function init() : void{
-		$recipes = json_decode(file_get_contents(\pocketmine\RESOURCE_PATH . "recipes.json"), true)["recipes"];
+		$recipes = json_decode(file_get_contents(\pocketmine\RESOURCE_PATH . "vanilla" . DIRECTORY_SEPARATOR . "recipes.json"), true);
 
 		$itemDeserializerFunc = \Closure::fromCallable([Item::class, 'jsonDeserialize']);
 		foreach($recipes as $recipe){
 			switch($recipe["type"]){
 				case "shapeless":
-					//if($recipe["block"] !== "crafting_table"){ //TODO: filter others out for now to avoid breaking economics
-				//		break;
-					//}
+					if($recipe["block"] !== "crafting_table"){ //TODO: filter others out for now to avoid breaking economics
+						break;
+					}
 					$this->registerRecipe(new ShapelessRecipe(
 						array_map($itemDeserializerFunc, $recipe["input"]),
 						array_map($itemDeserializerFunc, $recipe["output"])

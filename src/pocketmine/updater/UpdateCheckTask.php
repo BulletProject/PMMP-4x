@@ -27,6 +27,7 @@ namespace pocketmine\updater;
 
 use pocketmine\scheduler\AsyncTask;
 use pocketmine\Server;
+use pocketmine\utils\Internet;
 use function is_array;
 use function json_decode;
 
@@ -45,8 +46,44 @@ class UpdateCheckTask extends AsyncTask{
 	}
 
 	public function onRun(){
+		$error = "";
+		$response = Internet::getURL($this->endpoint . "?channel=" . $this->channel, 4, [], $error);
+		$this->error = $error;
+
+		if($response !== false){
+			$response = json_decode($response, true);
+			if(is_array($response)){
+				if(
+					isset($response["base_version"]) and
+					isset($response["is_dev"]) and
+					isset($response["build"]) and
+					isset($response["date"]) and
+					isset($response["download_url"])
+				){
+					$response["details_url"] = $response["details_url"] ?? null;
+					$this->setResult($response);
+				}elseif(isset($response["error"])){
+					$this->error = $response["error"];
+				}else{
+					$this->error = "Invalid response data";
+				}
+			}else{
+				$this->error = "Invalid response data";
+			}
+		}
 	}
 
 	public function onCompletion(Server $server){
+		if($this->error !== ""){
+			$server->getLogger()->debug("[AutoUpdater] Async update check failed due to \"$this->error\"");
+		}else{
+			$updateInfo = $this->getResult();
+			if(is_array($updateInfo)){
+				$server->getUpdater()->checkUpdateCallback($updateInfo);
+			}else{
+				$server->getLogger()->debug("[AutoUpdater] Update info error");
+			}
+
+		}
 	}
 }

@@ -27,7 +27,6 @@ namespace pocketmine\network\mcpe;
 
 use pocketmine\entity\Attribute;
 use pocketmine\entity\Entity;
-use pocketmine\entity\Skin;
 use pocketmine\item\Durable;
 use pocketmine\item\Item;
 use pocketmine\item\ItemFactory;
@@ -40,8 +39,6 @@ use pocketmine\network\mcpe\protocol\types\CommandOriginData;
 use pocketmine\network\mcpe\protocol\types\EntityLink;
 use pocketmine\network\mcpe\protocol\types\StructureSettings;
 use pocketmine\utils\BinaryStream;
-use pocketmine\utils\SerializedImage;
-use pocketmine\utils\SkinAnimation;
 use pocketmine\utils\UUID;
 use function count;
 use function strlen;
@@ -75,65 +72,6 @@ class NetworkBinaryStream extends BinaryStream{
 		$this->putLInt($uuid->getPart(0));
 		$this->putLInt($uuid->getPart(3));
 		$this->putLInt($uuid->getPart(2));
-	}
-
-	public function putSkin(Skin $skin) : void{
-		$this->putString($skin->getSkinId());
-		$this->putString($skin->getSkinResourcePatch());
-		$this->putImage($skin->getSkinData());
-
-		$this->putLInt(count($animations = $skin->getAnimations()));
-		foreach($animations as $animation){
-			$this->putImage($animation->getImage());
-			$this->putLInt($animation->getType());
-			$this->putLFloat($animation->getFrames());
-		}
-
-		$this->putImage($skin->getCapeData());
-		$this->putString($skin->getGeometryData());
-		$this->putString($skin->getAnimationData());
-		$this->putBool($skin->isPremium());
-		$this->putBool($skin->isPersona());
-		$this->putBool($skin->isCapeOnClassic());
-		$this->putString($skin->getCapeId());
-		$this->putString($skin->getFullSkinId());
-	}
-
-	public function getSkin() : Skin{
-		$skinId = $this->getString();
-		$skinResourcePatch = $this->getString();
-		$skinData = $this->getImage();
-
-		$animations = [];
-		for($i = 0, $count = $this->getLInt(); $i < $count; ++$i){
-			$animations[] = new SkinAnimation($this->getImage(), $this->getLInt(), $this->getLFloat());
-		}
-
-		$capeData = $this->getImage();
-		$geometryData = $this->getString();
-		$animationData = $this->getString();
-		$premium = $this->getBool();
-		$persona = $this->getBool();
-		$capeOnClassic = $this->getBool();
-		$capeId = $this->getString();
-		$fullSkinId = $this->getString();
-
-		return new Skin($skinId, $skinResourcePatch, $skinData, $animations, $capeData, $geometryData, $animationData, $premium, $persona, $capeOnClassic, $capeId);
-	}
-
-
-	public function putImage(SerializedImage $image) : void{
-		$this->putLInt($image->getWidth());
-		$this->putLInt($image->getHeight());
-		$this->putString($image->getData());
-	}
-
-	public function getImage() : SerializedImage{
-		$width = $this->getLInt();
-		$height = $this->getLInt();
-		$data = $this->getString();
-
-		return new SerializedImage($width, $height, $data);
 	}
 
 	public function getSlot() : Item{
@@ -189,7 +127,6 @@ class NetworkBinaryStream extends BinaryStream{
 			}
 		}
 		end:
-
 		return ItemFactory::get($id, $data, $cnt, $nbt);
 	}
 
@@ -248,7 +185,6 @@ class NetworkBinaryStream extends BinaryStream{
 			$meta = -1;
 		}
 		$count = $this->getVarInt();
-
 		return ItemFactory::get($id, $meta, $count);
 	}
 
@@ -521,10 +457,9 @@ class NetworkBinaryStream extends BinaryStream{
 	 * Note: ONLY use this where it is reasonable to allow not specifying the vector.
 	 * For all other purposes, use the non-nullable version.
 	 *
-	 * @param Vector3|null $vector
-	 *
 	 * @see NetworkBinaryStream::putVector3()
 	 *
+	 * @param Vector3|null $vector
 	 */
 	public function putVector3Nullable(?Vector3 $vector) : void{
 		if($vector){

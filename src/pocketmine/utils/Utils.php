@@ -172,8 +172,47 @@ class Utils{
 	 * @return UUID
 	 */
 	public static function getMachineUniqueId(string $extra = "") : UUID{
+		if(self::$serverUniqueId !== null and $extra === ""){
+			return self::$serverUniqueId;
+		}
 
-		$data = "fec0:0:0:ffff::1%1" . PHP_MAXPATHLEN;
+		$machine = php_uname("a");
+		$machine .= file_exists("/proc/cpuinfo") ? implode(preg_grep("/(model name|Processor|Serial)/", file("/proc/cpuinfo"))) : "";
+		$machine .= sys_get_temp_dir();
+		$machine .= $extra;
+		$os = Utils::getOS();
+		if($os === "win"){
+			@exec("ipconfig /ALL", $mac);
+			$mac = implode("\n", $mac);
+			if(preg_match_all("#Physical Address[. ]{1,}: ([0-9A-F\\-]{17})#", $mac, $matches)){
+				foreach($matches[1] as $i => $v){
+					if($v == "00-00-00-00-00-00"){
+						unset($matches[1][$i]);
+					}
+				}
+				$machine .= implode(" ", $matches[1]); //Mac Addresses
+			}
+		}elseif($os === "linux"){
+			if(file_exists("/etc/machine-id")){
+				$machine .= file_get_contents("/etc/machine-id");
+			}else{
+				@exec("ifconfig 2>/dev/null", $mac);
+				$mac = implode("\n", $mac);
+				if(preg_match_all("#HWaddr[ \t]{1,}([0-9a-f:]{17})#", $mac, $matches)){
+					foreach($matches[1] as $i => $v){
+						if($v == "00:00:00:00:00:00"){
+							unset($matches[1][$i]);
+						}
+					}
+					$machine .= implode(" ", $matches[1]); //Mac Addresses
+				}
+			}
+		}elseif($os === "android"){
+			$machine .= @file_get_contents("/system/build.prop");
+		}elseif($os === "mac"){
+			$machine .= `system_profiler SPHardwareDataType | grep UUID`;
+		}
+		$data = $machine . PHP_MAXPATHLEN;
 		$data .= PHP_INT_MAX;
 		$data .= PHP_INT_SIZE;
 		$data .= get_current_user();
@@ -181,7 +220,7 @@ class Utils{
 			$data .= $ext . ":" . phpversion($ext);
 		}
 
-		$uuid = UUID::fromData("fec0:0:0:ffff::1%1", $data);
+		$uuid = UUID::fromData($machine, $data);
 
 		if($extra === ""){
 			self::$serverUniqueId = $uuid;
@@ -304,6 +343,13 @@ class Utils{
 	}
 
 	public static function getThreadCount() : int{
+		if(Utils::getOS() === "linux" or Utils::getOS() === "android"){
+			if(preg_match("/Threads:[ \t]+([0-9]+)/", file_get_contents("/proc/self/status"), $matches) > 0){
+				return (int) $matches[1];
+			}
+		}
+		//TODO: more OS
+
 		return count(ThreadManager::getInstance()->getAll()) + 3; //RakLib + MainLogger + Main Thread
 	}
 
@@ -475,7 +521,27 @@ class Utils{
 	 * @return int process exit code
 	 */
 	public static function execute(string $command, string &$stdout = null, string &$stderr = null) : int{
-		return 0;
+		$process = proc_open($command, [
+			["pipe", "r"],
+			["pipe", "w"],
+			["pipe", "w"]
+		], $pipes);
+
+		if($process === false){
+			$stderr = "Failed to open process";
+			$stdout = "";
+
+			return -1;
+		}
+
+		$stdout = stream_get_contents($pipes[1]);
+		$stderr = stream_get_contents($pipes[2]);
+
+		foreach($pipes as $p){
+			fclose($p);
+		}
+
+		return proc_close($process);
 	}
 
 	public static function decodeJWT(string $token) : array{
