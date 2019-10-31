@@ -21,19 +21,38 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\network\mcpe\protocol\types;
 
-class CommandParameter{
-	/** @var string */
-	public $paramName;
-	/** @var int */
-	public $paramType;
-	/** @var bool */
-	public $isOptional;
-	/** @var int */
-	public $flags = 0; //shows enum name if 1, always zero except for in /gamerule command
-	/** @var CommandEnum|null */
-	public $enum;
-	/** @var string|null */
-	public $postfix;
+namespace pocketmine\utils;
+
+
+class SkinAnimation
+{
+    /** @var SerializedImage */
+    private $image;
+    /** @var int */
+    private $type;
+    /** @var float */
+    private $frames;
+
+    public function __construct(SerializedImage $image, int $type, float $frames)
+    {
+        $this->image = $image;
+        $this->type = $type;
+        $this->frames = $frames;
+    }
+
+    public function getImage(): SerializedImage
+    {
+        return $this->image;
+    }
+
+    public function getType(): int
+    {
+        return $this->type;
+    }
+
+    public function getFrames(): float
+    {
+        return $this->frames;
+    }
 }
