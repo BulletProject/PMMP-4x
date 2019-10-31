@@ -145,8 +145,8 @@ class Human extends Creature implements ProjectileSource, InventoryHolder{
 				SerializedImage::fromLegacy($skinTag->getByteArray("CapeData", "")),
 				$skinTag->getByteArray("GeometryData", ""),
 				"",
-				Skin::convertLegacyGeometryName($skinTag->getString("GeometryName", "")),
-			);
+				Skin::convertLegacyGeometryName($skinTag->getString("GeometryName", "")
+			));
 		}
 
 		$skin->validate();

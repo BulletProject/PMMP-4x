@@ -1,10 +1,15 @@
 [submodule "src/pocketmine/lang/locale"]
 	path = src/pocketmine/lang/locale
 	url = https://github.com/pmmp/PocketMine-Language.git
-[submodule "src/pocketmine/resources/vanilla"]
-	path = src/pocketmine/resources/vanilla
-	url = https://github.com/pmmp/BedrockData.git
+[submodule "tests/preprocessor"]
+	path = build/preprocessor
+	url = https://github.com/pmmp/preprocessor.git
 [submodule "PocketMine-DevTools"]
 	path = PocketMine-DevTools
 	url = https://github.com/pmmp/PocketMine-DevTools.git
-
+[submodule "src/pocketmine/resources/vanilla"]
+	path = src/pocketmine/resources/vanilla
+	url = https://github.com/pmmp/BedrockData.git
+[submodule "build/php"]
+	path = build/php
+	url = https://github.com/pmmp/php-build-scripts.git
