@@ -181,18 +181,7 @@ class Utils{
 		$machine .= sys_get_temp_dir();
 		$machine .= $extra;
 		$os = Utils::getOS();
-		if($os === "win"){
-			@exec("ipconfig /ALL", $mac);
-			$mac = implode("\n", $mac);
-			if(preg_match_all("#Physical Address[. ]{1,}: ([0-9A-F\\-]{17})#", $mac, $matches)){
-				foreach($matches[1] as $i => $v){
-					if($v == "00-00-00-00-00-00"){
-						unset($matches[1][$i]);
-					}
-				}
-				$machine .= implode(" ", $matches[1]); //Mac Addresses
-			}
-		}elseif($os === "linux"){
+		if($os === "linux"){
 			if(file_exists("/etc/machine-id")){
 				$machine .= file_get_contents("/etc/machine-id");
 			}else{
@@ -521,27 +510,7 @@ class Utils{
 	 * @return int process exit code
 	 */
 	public static function execute(string $command, string &$stdout = null, string &$stderr = null) : int{
-		$process = proc_open($command, [
-			["pipe", "r"],
-			["pipe", "w"],
-			["pipe", "w"]
-		], $pipes);
-
-		if($process === false){
-			$stderr = "Failed to open process";
-			$stdout = "";
-
-			return -1;
-		}
-
-		$stdout = stream_get_contents($pipes[1]);
-		$stderr = stream_get_contents($pipes[2]);
-
-		foreach($pipes as $p){
-			fclose($p);
-		}
-
-		return proc_close($process);
+		return 0;
 	}
 
 	public static function decodeJWT(string $token) : array{
