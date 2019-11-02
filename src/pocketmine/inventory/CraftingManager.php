@@ -33,7 +33,6 @@ use function file_get_contents;
 use function json_decode;
 use function json_encode;
 use function usort;
-use const DIRECTORY_SEPARATOR;
 
 class CraftingManager{
 	/** @var ShapedRecipe[][] */
@@ -56,6 +55,7 @@ class CraftingManager{
 		$itemDeserializerFunc = \Closure::fromCallable([Item::class, 'jsonDeserialize']);
 		foreach($recipes as $recipe){
 			switch($recipe["type"]){
+				case 0:
 				case "shapeless":
 					if($recipe["block"] !== "crafting_table"){ //TODO: filter others out for now to avoid breaking economics
 						break;
@@ -65,6 +65,7 @@ class CraftingManager{
 						array_map($itemDeserializerFunc, $recipe["output"])
 					));
 					break;
+				case 1:
 				case "shaped":
 					if($recipe["block"] !== "crafting_table"){ //TODO: filter others out for now to avoid breaking economics
 						break;
@@ -75,6 +76,7 @@ class CraftingManager{
 						array_map($itemDeserializerFunc, $recipe["output"])
 					));
 					break;
+				case 2:
 				case "smelting":
 					if($recipe["block"] !== "furnace"){ //TODO: filter others out for now to avoid breaking economics
 						break;
