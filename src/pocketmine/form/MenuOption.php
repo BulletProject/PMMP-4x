@@ -21,33 +21,48 @@
 
 declare(strict_types=1);
 
+namespace pocketmine\form;
 
-namespace pocketmine\utils;
+/**
+ * Represents an option on a MenuForm. The option is shown as a button and may optionally have an image next to it.
+ */
+class MenuOption implements \JsonSerializable{
 
-
-class SkinAnimation{
-	/** @var SerializedImage */
+	/**
+	 * @var string
+	 */
+	private $text;
+	/**
+	 * @var FormIcon|null
+	 */
 	private $image;
-	/** @var int */
-	private $type;
-	/** @var float */
-	private $frames;
 
-	public function __construct(SerializedImage $image, int $type, float $frames){
+	public function __construct(string $text, ?FormIcon $image = null){
+		$this->text = $text;
 		$this->image = $image;
-		$this->type = $type;
-		$this->frames = $frames;
 	}
 
-	public function getImage() : SerializedImage{
+	public function getText() : string{
+		return $this->text;
+	}
+
+	public function hasImage() : bool{
+		return $this->image !== null;
+	}
+
+	public function getImage() : ?FormIcon{
 		return $this->image;
 	}
 
-	public function getType() : int{
-		return $this->type;
-	}
+	public function jsonSerialize(){
+		$json = [
+			"text" => $this->text
+		];
 
-	public function getFrames() : float{
-		return $this->frames;
+		if($this->hasImage()){
+			$json["image"] = $this->image;
+		}
+
+		return $json;
 	}
 }

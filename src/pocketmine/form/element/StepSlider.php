@@ -21,18 +21,18 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\inventory;
+namespace pocketmine\form\element;
 
-class CraftingGrid extends PlayerUIComponent{
+class StepSlider extends BaseSelector{
 
-	public const OFFSET_SMALL = 28;
-	public const OFFSET_BIG = 32;
-
-	public const SIZE_SMALL = 4;
-	public const SIZE_BIG = 9;
-
-	public function __construct(PlayerUIInventory $playerUI, int $offset, int $size){
-		parent::__construct($playerUI, $offset, $size);
+	public function getType() : string{
+		return "step_slider";
 	}
 
+	protected function serializeElementData() : array{
+		return [
+			"steps" => $this->options,
+			"default" => $this->defaultOptionIndex
+		];
+	}
 }

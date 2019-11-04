@@ -21,18 +21,18 @@
 
 declare(strict_types=1);
 
-namespace pocketmine\inventory;
+namespace pocketmine\form\element;
 
-class CraftingGrid extends PlayerUIComponent{
+class Dropdown extends BaseSelector{
 
-	public const OFFSET_SMALL = 28;
-	public const OFFSET_BIG = 32;
-
-	public const SIZE_SMALL = 4;
-	public const SIZE_BIG = 9;
-
-	public function __construct(PlayerUIInventory $playerUI, int $offset, int $size){
-		parent::__construct($playerUI, $offset, $size);
+	public function getType() : string{
+		return "dropdown";
 	}
 
+	protected function serializeElementData() : array{
+		return [
+			"options" => $this->options,
+			"default" => $this->defaultOptionIndex
+		];
+	}
 }

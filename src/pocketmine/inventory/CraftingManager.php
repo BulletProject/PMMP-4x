@@ -76,14 +76,14 @@ class CraftingManager{
 						array_map($itemDeserializerFunc, $recipe["output"])
 					));
 					break;
-				case 2:
+				case 3:
 				case "smelting":
 					if($recipe["block"] !== "furnace"){ //TODO: filter others out for now to avoid breaking economics
 						break;
 					}
 					$this->registerRecipe(new FurnaceRecipe(
-						Item::jsonDeserialize($recipe["output"]),
-						Item::jsonDeserialize($recipe["input"]))
+							Item::jsonDeserialize($recipe["output"]),
+							Item::jsonDeserialize($recipe["input"]))
 					);
 					break;
 				default:
@@ -241,7 +241,7 @@ class CraftingManager{
 
 	/**
 	 * @param CraftingGrid $grid
-	 * @param Item[]       $outputs
+	 * @param Item[] $outputs
 	 *
 	 * @return CraftingRecipe|null
 	 */
