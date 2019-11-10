@@ -31,9 +31,12 @@ class EnchantInventory extends ContainerInventory{
 
 	/** @var Position */
 	protected $holder;
+	/** @var Player */
+	protected $player;
 
-	public function __construct(Position $pos){
+	public function __construct(Position $pos, Player $who){
 		parent::__construct($pos->asPosition());
+		$this->player = $who;
 	}
 
 	public function getNetworkType() : int{
@@ -45,7 +48,7 @@ class EnchantInventory extends ContainerInventory{
 	}
 
 	public function getDefaultSize() : int{
-		return 2; //1 input, 1 lapis
+		return 2; //1 input, 1 lapis io:14 lapis:15
 	}
 
 	/**
@@ -59,7 +62,7 @@ class EnchantInventory extends ContainerInventory{
 	public function onClose(Player $who) : void{
 		parent::onClose($who);
 
-		foreach($this->getContents() as $item){
+		foreach($who->getInventory()->addItem(...$this->getContents()) as $item){
 			$who->dropItem($item);
 		}
 		$this->clearAll();

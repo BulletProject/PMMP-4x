@@ -29,6 +29,7 @@ use pocketmine\inventory\transaction\action\InventoryAction;
 use pocketmine\inventory\transaction\action\SlotChangeAction;
 use pocketmine\item\Item;
 use pocketmine\network\mcpe\protocol\InventoryTransactionPacket;
+use pocketmine\network\mcpe\protocol\types\ContainerIds;
 use pocketmine\Player;
 
 class NetworkInventoryAction{
@@ -169,6 +170,15 @@ class NetworkInventoryAction{
 	public function createInventoryAction(Player $player){
 		switch($this->sourceType){
 			case self::SOURCE_CONTAINER:
+				if($this->windowId === ContainerIds::UI){
+					if($this->inventorySlot === 14 || $this->inventorySlot === 15){
+						$player->EnchantPacket($this);
+						$window = $player->getLastWindow();
+						if($window !== null){
+							return new SlotChangeAction($window, $this->inventorySlot - 14, $this->oldItem, $this->newItem);
+						}
+					}
+				}
 				$window = $player->getWindow($this->windowId);
 				if($window !== null){
 					return new SlotChangeAction($window, $this->inventorySlot, $this->oldItem, $this->newItem);
@@ -206,6 +216,13 @@ class NetworkInventoryAction{
 					case self::SOURCE_TYPE_CRAFTING_RESULT:
 					case self::SOURCE_TYPE_CRAFTING_USE_INGREDIENT:
 						return null;
+					case self::SOURCE_TYPE_ENCHANT_INPUT:
+					case self::SOURCE_TYPE_ENCHANT_MATERIAL:
+					case self::SOURCE_TYPE_ENCHANT_OUTPUT:
+						//$player->getWindow($this->windowId);
+						$sca = new SlotChangeAction($player->getCraftingGrid(), $this->inventorySlot, $this->oldItem, $this->newItem);
+						$sca->setFake();
+						return $sca;
 				}
 
 				//TODO: more stuff

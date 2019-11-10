@@ -19,22 +19,12 @@
  *
 */
 
-declare(strict_types=1);
-
-namespace pocketmine\inventory;
-
-class CraftingGrid extends PlayerUIComponent{
-
-	public const OFFSET_SMALL = 28;
-	public const OFFSET_BIG = 32;
-	public const OFFSET_ENCHANT = 14;
-
-	public const SIZE_SMALL = 4;
-	public const SIZE_BIG = 9;
-	public const SIZE_ENCHANT = 2;
-
-	public function __construct(PlayerUIInventory $playerUI, int $offset, int $size){
-		parent::__construct($playerUI, $offset, $size);
-	}
-
+// composer autoload doesn't use require_once and also pthreads can inherit things
+if(defined('pocketmine\_GLOBAL_CONSTANTS_INCLUDED')){
+	return;
 }
+define('pocketmine\_GLOBAL_CONSTANTS_INCLUDED', true);
+
+const INT32_MIN = -0x80000000;
+const INT32_MAX = 0x7fffffff;
+define("INT32_MASK", is_int(0xffffffff) ? 0xffffffff : -1);
