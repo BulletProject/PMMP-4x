@@ -53,6 +53,7 @@ use pocketmine\event\player\PlayerEditBookEvent;
 use pocketmine\event\player\PlayerExhaustEvent;
 use pocketmine\event\player\PlayerGameModeChangeEvent;
 use pocketmine\event\player\PlayerInteractEvent;
+use pocketmine\event\player\PlayerItemConsumeEvent;
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\event\player\PlayerJumpEvent;
 use pocketmine\event\player\PlayerKickEvent;
@@ -76,6 +77,7 @@ use pocketmine\inventory\transaction\action\InventoryAction;
 use pocketmine\inventory\transaction\CraftingTransaction;
 use pocketmine\inventory\transaction\InventoryTransaction;
 use pocketmine\inventory\transaction\TransactionValidationException;
+use pocketmine\item\Consumable;
 use pocketmine\item\Durable;
 use pocketmine\item\enchantment\EnchantmentInstance;
 use pocketmine\item\enchantment\MeleeWeaponEnchantment;
@@ -109,7 +111,6 @@ use pocketmine\network\mcpe\protocol\BlockActorDataPacket;
 use pocketmine\network\mcpe\protocol\BlockPickRequestPacket;
 use pocketmine\network\mcpe\protocol\BookEditPacket;
 use pocketmine\network\mcpe\protocol\ChunkRadiusUpdatedPacket;
-use pocketmine\network\mcpe\protocol\CompletedUsingItemPacket;
 use pocketmine\network\mcpe\protocol\ContainerClosePacket;
 use pocketmine\network\mcpe\protocol\DataPacket;
 use pocketmine\network\mcpe\protocol\DisconnectPacket;
@@ -533,8 +534,6 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 	public function spawnTo(Player $player) : void{
 		if($this->spawned and $player->spawned and $this->isAlive() and $player->isAlive() and $player->getLevel() === $this->level and $player->canSee($this) and !$this->isSpectator()){
 			parent::spawnTo($player);
-
-			$this->sendSkin([$player]);
 		}
 	}
 
@@ -1131,10 +1130,10 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 		}
 	}
 
-	protected function sendRespawnPacket(Vector3 $pos){
+	protected function sendRespawnPacket(Vector3 $pos, int $respawnState = RespawnPacket::STATE_SEARCHING_FOR_SPAWN){
 		$pk = new RespawnPacket();
 		$pk->position = $pos->add(0, $this->baseOffset, 0);
-		$pk->respawnState = RespawnPacket::STATE_SEARCHING_FOR_SPAWN;
+		$pk->respawnState = $respawnState;
 		$pk->runtimeEntityId = $this->id;
 
 		$this->dataPacket($pk);
@@ -2038,14 +2037,11 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 	public function handleRespawn(RespawnPacket $packet) : bool{
 		if(!$this->isAlive() && $packet->respawnState === RespawnPacket::STATE_CLIENT_READY_TO_SPAWN){
-			$packet = new RespawnPacket();
-			$packet->position = $this->asVector3();
-			$packet->respawnState = RespawnPacket::STATE_READY_TO_SPAWN;
-			$packet->runtimeEntityId = $this->id;
-			$this->dataPacket($packet);
+			$this->sendRespawnPacket($this, RespawnPacket::STATE_READY_TO_SPAWN);
+			return true;
 		}
 
-		return true;
+		return false;
 	}
 
 	public function sendPlayStatus(int $status, bool $immediate = false){
@@ -2586,6 +2582,27 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 
 						return true;
 					case InventoryTransactionPacket::USE_ITEM_ACTION_CLICK_AIR:
+						if($this->isUsingItem()){
+							$slot = $this->inventory->getItemInHand();
+							if($slot instanceof Consumable){
+								$ev = new PlayerItemConsumeEvent($this, $slot);
+								if($this->hasItemCooldown($slot)){
+									$ev->setCancelled();
+								}
+								$ev->call();
+								if($ev->isCancelled() or !$this->consumeObject($slot)){
+									$this->inventory->sendContents($this);
+									return true;
+								}
+								$this->resetItemCooldown($slot);
+								if($this->isSurvival()){
+									$slot->pop();
+									$this->inventory->setItemInHand($slot);
+									$this->inventory->addItem($slot->getResidue());
+								}
+								$this->setUsingItem(false);
+							}
+						}
 						$directionVector = $this->getDirectionVector();
 
 						if($this->isCreative()){
@@ -2613,21 +2630,9 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 							if($this->isSurvival()){
 								$this->inventory->setItemInHand($item);
 							}
-
-							if(!$this->isUsingItem()){
-								$this->setUsingItem(true);
-								return true;
-							}
-
-							$ticksUsed = $this->server->getTick() - $this->startAction;
-							$this->setUsingItem(false);
-							if($item->onUse($this, $ticksUsed)){
-								$pk = new CompletedUsingItemPacket();
-								$pk->itemId = $item->getId();
-								$pk->action = $item->getCompletionAction();
-								$this->dataPacket($pk);
-							}
 						}
+
+						$this->setUsingItem(true);
 
 						return true;
 					default:
@@ -2742,15 +2747,9 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 									$this->inventory->sendContents($this);
 									return false;
 								}
-
-								$ticksUsed = $this->server->getTick() - $this->startAction;
-								if($item->onRelease($this, $ticksUsed)){
+								if($item->onReleaseUsing($this)){
 									$this->resetItemCooldown($item);
 									$this->inventory->setItemInHand($item);
-									$pk = new CompletedUsingItemPacket();
-									$pk->itemId = $item->getId();
-									$pk->action = $item->getCompletionAction();
-									$this->dataPacket($pk);
 								}
 							}else{
 								break;
@@ -2937,16 +2936,14 @@ class Player extends Human implements CommandSender, ChunkLoader, IPlayer{
 				return true;
 			case PlayerActionPacket::ACTION_START_GLIDE:
 				if($this->checkElytra()){
-					$this->E_allowFlight = $this->allowFlight;
-					$this->usingElytra = $this->allowFlight = true;
-					$this->sendSettings();
+					$this->usingElytra = true;
+					//$this->sendSettings();
 				}
 				break;
 			case PlayerActionPacket::ACTION_STOP_GLIDE:
 				if($this->usingElytra){
-					$this->allowFlight = $this->E_allowFlight;
-					$this->usingElytra = $this->allowFlight = true;
-					$this->sendSettings();
+					$this->usingElytra = true;
+					//$this->sendSettings();
 				}
 				break; //TODO
 			case PlayerActionPacket::ACTION_CONTINUE_BREAK:
