@@ -9,8 +9,8 @@ if exist bin\php\php.exe (
 	set PHP_BINARY=php
 )
 
-if exist Altay_v3.0.7.phar (
-	set POCKETMINE_FILE=Altay_v3.0.7.phar
+if exist pmmp.phar (
+	set POCKETMINE_FILE=pmmp.phar
 ) else (
 	if exist src\pocketmine\PocketMine.php (
 		set POCKETMINE_FILE=src\pocketmine\PocketMine.php

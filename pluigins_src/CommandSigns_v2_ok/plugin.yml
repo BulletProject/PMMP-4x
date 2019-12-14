@@ -1,0 +1,9 @@
+name: CommandSigns
+main: Samueljh1\CommandSigns\main
+version: 2.0
+api:
+- 3.0.0
+- 4.0.0
+author: Samueljh1
+load: POSTWORLD
+description: A Plugin that Runs Commands on Sign-Tap!
